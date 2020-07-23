@@ -1,0 +1,14 @@
+{
+    "name": "dev-cli",
+    "version": "0.0.1",
+    "main": "dev-cli",
+    "repository": "dev",
+    "author": "smallsaas.cn",
+    "dependencies": {
+        "commander": "^2.16.0",
+        "handlebars": "^4.0.11"
+    },
+    "bin": {
+        "deployless": "./deployless.sh"
+    }
+}

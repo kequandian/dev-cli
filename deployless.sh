@@ -1,7 +1,7 @@
 #!/usr/bin/bash
 
 ## customer config for deploy target ###########
-export DEPLOYLESS_TARGET='ems@mall.smallsaas.cn:/home/ems/am'
+#export DEPLOYLESS_TARGET='ems@mall.smallsaas.cn:/home/ems/am'
 ################################################
 
 #### split from target  below ### 
@@ -81,9 +81,9 @@ deploy_lib() {
 
 ## main  ##
 ## ensure go into pack root first
-pack_dir=$(dirname $0)
-cd $pack_dir
-cd ..
+#pack_dir=$(dirname $0)
+#cd $pack_dir
+#cd ..
 
 ## flag deploy lib
 deploy_ok=()
