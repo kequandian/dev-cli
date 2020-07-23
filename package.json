@@ -9,6 +9,8 @@
         "handlebars": "^4.0.11"
     },
     "bin": {
-        "deployless": "./deployless.sh"
+        "deployless": "./deployless.sh",
+	"remote": "./remote",
+	"standalone": "./standalone"
     }
 }
