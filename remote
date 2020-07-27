@@ -15,8 +15,8 @@ if(!$dir || !$cmd){
     print "   mv              -- mv one repo name to new name\n";
     print "   fix <target>    -- fix one repo base on the dir name\n";
     print "   clone <target>  -- clone a repo base on the dir repo \n";
-    print "   test <repo>     -- clone test repo into a new repo\n";
-    print "   pull .          -- pull all the repo in current dir]\n";
+    print "   pull .          -- pull all the repo in current dir\n";
+    print "   clean .          -- clean current dir base on pom.xml\n";
     print "   mirror <target> [mirror] -- mirror current repo into a mirror repo\n";
     print "   mirrorback <target> [imrror] -- mirror repo into current target\n";
     exit(0);
@@ -271,10 +271,21 @@ if($cmd eq "xfr"){
 
    }## end within git repo
 
-}elsif($cmd eq 'test'){
+}elsif($cmd eq 'clean'){
    chdir $dir;
-   my $new_repo = $param;
-   print `git clone jfeat\@112.74.26.228:/home/jfeat/git/test.git $new_repo`;
+   
+   if ( -f 'pom.xml' ){
+      `mvn clean`
+   }else{
+      my $pom = $0;
+      $pom =~ tr/\\/\//;
+      $pom =~ s/^c:\//\/c\//i;
+      $pom =~ s/\/\w+$//;
+      $pom = "$pom".'/pom.xm_';
+      if(-f $pom){
+         print `cp $pom . && mv pom.xm_ pom.xml && ls pom.xml`;
+      }
+   }
 
 }else{
    print "unknown command $cmd\n";
