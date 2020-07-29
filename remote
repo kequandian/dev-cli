@@ -277,14 +277,38 @@ if($cmd eq "xfr"){
    if ( -f 'pom.xml' ){
       `mvn clean`
    }else{
-      my $pom = $0;
-      $pom =~ tr/\\/\//;
-      $pom =~ s/^c:\//\/c\//i;
-      $pom =~ s/\/\w+$//;
-      $pom = "$pom".'/pom.xm_';
-      if(-f $pom){
-         print `cp $pom . && mv pom.xm_ pom.xml && ls pom.xml`;
+
+      my @dirs = ();
+      opendir(DIR, $dir);
+         @dirs = readdir(DIR);
+      closedir(DIR);
+
+      foreach my $target (@dirs){
+         if(-d $target){
+            if( $target =~ /^\./){
+               next;
+            }
+
+            chdir $target;
+            print `pwd`;
+
+            if(-f 'pom.xml'){
+               print `mvn clean`;
+            }
+            chdir '..';
+         }
       }
+
+      #my $pom = $0;
+      #$pom =~ tr/\\/\//;
+      #$pom =~ s/^c:\//\/c\//i;
+      #$pom =~ s/\/\w+$//;
+      #$pom = "$pom".'/pom.xm_';
+      #if(-f $pom){
+      #   print `cp $pom . && mv pom.xm_ pom.xml && ls pom.xml`;
+      #}
+
+
    }
 
 }else{

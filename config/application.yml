@@ -2,9 +2,9 @@
 spring:
   profiles: standalone
   datasource:
-      url: jdbc:mysql://120.79.49.72/test?useSSL=false&autoReconnect=true&useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&allowMultiQueries=true
+      url: jdbc:mysql://go.smallsaas.cn:10080/test?useSSL=false&autoReconnect=true&useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&allowMultiQueries=true
       username: root
-      password: root
+      password: rootAZaz123
       filters: log4j,wall,mergeStat
       sql-script-encoding: UTF-8
       schema: classpath*:sql/*-schema.sql
