@@ -2,7 +2,7 @@
 option=$1
 
 ########dependency-cli.jar path########
-jar_path=./lib/dependency-cli.jar
+jar_path=$(cd `dirname $0`;pwd)/lib/dependency-cli.jar
 compare='-c --compare'
 parse='-p --parse'
 version='-v --version'
@@ -10,6 +10,7 @@ version='-v --version'
 #echo jar_path=${jar_path}
 #echo option=${option}
 ##############################
+
 
 if [ ! $option ]
 then
@@ -27,10 +28,10 @@ fi
 
 if [[ $compare =~ $option ]]
 then
-	java -jar $jar_path $*
+	java -jar $jar_path $option $(readlink -f "$2") $(readlink -f "$3")
 elif [[ $parse =~ $option ]]
 then
-	java -jar $jar_path $*
+	java -jar $jar_path $option $(readlink -f "$2")
 elif [[ $version =~ $option ]]
 then
 	java -jar $jar_path $*
