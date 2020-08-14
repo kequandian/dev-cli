@@ -10,7 +10,8 @@
     },
     "bin": {
         "deployless": "./deployless.sh",
-	"remote": "./remote",
-	"standalone": "./standalone"
+        "remote": "./remote",
+        "standalone": "./standalone",
+        "dependency": "./dependency.sh"
     }
 }
