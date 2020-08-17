@@ -2,13 +2,11 @@
 Some tiny script tools in cli maner
 
 ### current cli
-> use to deploy local target/maven-build-jar.jar
->
-> - deployless  
+- deployless  
+> used to deploy local target/maven-build-jar.jar
 
-> use to git repo url freeely
 - dependency
-
+> used to check the dependencies between two jars or two mvn projects 
 ```shell
 $ dependency
 
@@ -24,6 +22,7 @@ Options:
 ```
 
 - remote
+> Used to handle multi git repo in current dir
 ```shell
 $ remote
 Usage:
@@ -39,9 +38,37 @@ Usage:
    mirrorback <target> [imrror] -- mirror repo into current target
 ```
 
-> use to run target/pack-1.0.0-standalone.jar locally 
-> first change path into the mvn project and type 'standalone'
 - standalone
+> used to run target/pack-1.0.0-standalone.jar locally 
+> first change path into the mvn project and type 'standalone'
+
+- pdf-page 
+> used to handle pdf file 
+```shell
+$ pdf-page
+Usage: pdf-page <source.pdf> <OPTIONS> <PARAM> [..]
+
+Page range support 1,2 [3-5], -1 mean last page.
+OPTIONS:
+ -h,--head   Head with images/pages.
+             pdf-page <source> -h <image-url|image-dir|pages.pdf>
+ -t,--tail   Tail up images/pages
+             pdf-page <source> -t <image-url|image-dir|pages.pdf>
+ -p,--pick   Pick up the range pages as new file.
+             pdf-page <source> -p <page-range>
+ -d,--delete Delete page.
+             pdf-page <source> -d <page-range>
+ -s,--split  Split the .pdf into multi ones with certain number of pages.
+             pdf-page <source> -s <pages>
+ -m,--mask   Mask specific area on page.
+             pdf-page <source> -m <page-number> <pos> <size>
+ -r,--ruler  Draw a ruler on page.
+             pdf-page <source> -r <page-number>
+ -T,--text   Draw text on page.
+             pdf-page <source> -t <page-number> <posx> <posy> <text> <LEFT|CENTER|RIGHT> <fontSize> [fontFamily]
+ -n,--number Number the page.
+             pdf-page <source> -n <page-number>
+```
 
 ## Install all the cli tools globally
 ```sh
