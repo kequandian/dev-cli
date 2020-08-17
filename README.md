@@ -50,6 +50,15 @@ $ cd dev-cli
 $ npm i -g
 ```
 
+## How to get the script running path 
+abs_path=()
+os_name=$(uname)
+if [[ $os_name == 'Darwin' ]];then  ## MAC
+   abs_path=$(greadlink -f "$0")
+else                                ## Windows
+   abs_path=$(readlink -f "$0")
+fi
+
 ### Markdown famous devops tools for reference
 - CoreOS
 - chef
