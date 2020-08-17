@@ -22,6 +22,14 @@ fi
 #dir=$(readlink -f "$0")
 dir=$(dirname $dir)
 
+
+## check in target dir
+targetdir=$(basename $PWD)
+if [ $targetdir = 'target' ];then
+   cd ..
+fi
+
+
 if [ ! -d target ];then
    mvn clean -DskipStandalone=false package
 fi
