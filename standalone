@@ -3,18 +3,17 @@
 server_port=$1
 
 check_server_port=$(echo $server_port | grep '\-\-server.port=')
-if [ $check_server_port ];then
+if [ $check_server_port ]; then
    server_port=$server_port
 else
-   server_port='--server.port=8080' 
-fi 
-
+   server_port='--server.port=8080'
+fi
 
 dir=''
 os_name=$(uname)
-if [[ $os_name == 'Darwin' ]];then
+if [[ $os_name == 'Darwin' ]]; then
    dir=$(greadlink -f "$0")
-else 
+else
    dir=$(readlink -f "$0")
 fi
 
@@ -22,24 +21,27 @@ fi
 #dir=$(readlink -f "$0")
 dir=$(dirname $dir)
 
-if [ ! -d target ];then
+if [ ! -d target ]; then
    mvn clean -DskipStandalone=false package
 fi
 
-if [ -d target ];then
+if [ -d target ]; then
    cd target
 fi
 
-if [ ! -e config ];then
-  mkdir config
+if [ ! -e config ]; then
+   mkdir config
 fi
 
-if [ ! -e ./config/application.yml ];then
-  cp $dir/standalone.yml ./config/application.yml
+if [ ! -e ./config/application.yml ]; then
+   cp $dir/standalone.yml ./config/application.yml
+fi
+
+if [ ! -e ./pom.xml ];then
+   cp -r $dir/pom_template.xml ./pom.xml
 fi
 
 standalone=$(ls *-standalone.jar)
 
 echo "java -jar $standalone --spring.profiles.active=standalone $server_port"
 java -jar $standalone --spring.profiles.active=standalone $server_port
-
