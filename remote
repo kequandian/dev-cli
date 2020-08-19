@@ -16,7 +16,8 @@ if(!$dir || !$cmd){
     print "   fix <target>    -- fix one repo base on the dir name\n";
     print "   clone <target>  -- clone a repo base on the dir repo \n";
     print "   pull .          -- pull all the repo in current dir\n";
-    print "   clean .          -- clean current dir base on pom.xml\n";
+    print "   clean .         -- clean current dir base on pom.xml\n";
+    print "   cleangit .      -- clean all the .git dir in current dir\n";
     print "   mirror <target> [mirror] -- mirror current repo into a mirror repo\n";
     print "   mirrorback <target> [imrror] -- mirror repo into current target\n";
     exit(0);
@@ -290,9 +291,8 @@ if($cmd eq "xfr"){
             }
 
             chdir $target;
-            print `pwd`;
-
             if(-f 'pom.xml'){
+               print `pwd`;
                print `mvn clean`;
             }
             chdir '..';
@@ -309,6 +309,45 @@ if($cmd eq "xfr"){
       #}
 
 
+   }
+
+}elsif($cmd eq 'cleangit'){
+   chdir $dir;
+
+   my @dirs = ();
+   opendir(DIR, $dir);
+      @dirs = readdir(DIR);
+   closedir(DIR);
+
+   foreach my $target (@dirs){
+      if(-d $target){
+         if( $target =~ /^\./){
+            next;
+         }
+
+         chdir $target;
+         my $ok;
+         if(-d '.git'){
+            $ok=1;
+            print `rm -rf .git`;
+         }
+         if(-d '.idea'){
+            $ok=1;
+            print `rm -rf .idea`;
+         }
+         if(-f '.gitignore'){
+            $ok=1;
+            print `rm -f .gitignore`;
+         }
+         if(-f '.iml'){
+            $ok=1;
+            print `rm -f .iml`;
+         }
+         if($ok){
+             print `pwd`;
+         }
+         chdir '..';
+      }
    }
 
 }else{

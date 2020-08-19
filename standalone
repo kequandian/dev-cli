@@ -21,7 +21,14 @@ fi
 #dir=$(readlink -f "$0")
 dir=$(dirname $dir)
 
-if [ ! -d target ]; then
+## check in target dir
+targetdir=$(basename $PWD)
+if [ $targetdir = 'target' ];then
+   cd ..
+fi
+
+
+if [ ! -d target ];then
    mvn clean -DskipStandalone=false package
 fi
 
@@ -39,6 +46,13 @@ fi
 
 if [ ! -e ./pom.xml ];then
    cp -r $dir/pom_template.xml ./pom.xml
+fi
+
+
+if [ $1 = "init" ] || [ $2 = "init" ];then
+	sed -i 's/initialize: false/initialize: true/' ./config/application.yml
+else
+	sed -i 's/initialize: true/initialize: false/' ./config/application.yml
 fi
 
 standalone=$(ls *-standalone.jar)
