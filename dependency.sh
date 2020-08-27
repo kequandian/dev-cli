@@ -2,7 +2,7 @@
 option=$1
 
 ########dependency-cli.jar path########
-jar_path=$(cd `dirname $0`;pwd)/lib/dependency-cli.jar
+jar_path=$(dirname $(readlink -f $0))/lib/dependency-cli.jar
 compare='^-c[j]?$'
 parse='^-p[j]?$'
 version='^-v$'
