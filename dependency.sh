@@ -26,6 +26,7 @@ usage(){
 
 	Options:
 	  -c, --compare </path/to/module1> </path/to/module2> 对比两个Maven module or Jar依赖情况
+        -> -b --boolean 判断module1 / jar1 是否能够装配入 module2 / jar2中
 	  -p, --parse </path/to/the-app.jar> [...]  解析Jar包依赖并输出
 	  -j, --JSON 输出为JSON格式
 	  -v, --version  输出当前工具版本信息
