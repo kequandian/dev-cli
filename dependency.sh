@@ -22,10 +22,10 @@ usage(){
 	
 	Usage: dependency Options [Variables...]
 	e.g. dependency -p ./lib/test.jar
-	用于Jar包依赖输出 和 Maven module依赖对比
+	用于Jar包依赖输出 和 Maven module or Jar依赖对比
 
 	Options:
-	  -c, --compare </path/to/module1> </path/to/module2> 对比两个Maven module依赖情况
+	  -c, --compare </path/to/module1> </path/to/module2> 对比两个Maven module or Jar依赖情况
 	  -p, --parse </path/to/the-app.jar> [...]  解析Jar包依赖并输出
 	  -j, --JSON 输出为JSON格式
 	  -v, --version  输出当前工具版本信息
