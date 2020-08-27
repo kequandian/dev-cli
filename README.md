@@ -16,9 +16,10 @@ e.g. dependency -p ./lib/test.jar
 
 Options:
   -c, --compare </path/to/module1> </path/to/module2> 对比两个Maven module OR Jar依赖包情况
-    -> -b --boolean 判断module1 / jar1 是否能够装配入 module2 / jar2中
-  -p, --parse </path/to/the-app.jar> [...]  解析Jar包依赖并输出
+    -> -b --boolean 判断module1 / jar1 是否能够装配入 module2 / jar2中    
+  -d  --download 根据参数groupId:artifactId:Version下载依赖文件到当前目录
   -j, --JSON 输出为JSON格式
+  -p, --parse </path/to/the-app.jar> [...]  解析Jar包依赖并输出
   -v, --version  输出当前工具版本信息
 ```
 
