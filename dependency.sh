@@ -3,8 +3,8 @@ option=$1
 
 ########dependency-cli.jar path########
 jar_path=$(cd `dirname $0`;pwd)/lib/dependency-cli.jar
-compare='^-c$'
-parse='^-[p][j]?$'
+compare='^-c[j]?$'
+parse='^-p[j]?$'
 version='^-v$'
 #############debug############
 #echo jar_path=${jar_path}

@@ -5,7 +5,7 @@ spring:
       url: jdbc:mysql://go.smallsaas.cn:10080/test?useSSL=false&autoReconnect=true&useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&allowMultiQueries=true
       username: root
       password: rootAZaz123
-      filters: log4j,wall,mergeStat
+      filters: log4j,mergeStat
       sql-script-encoding: UTF-8
       schema: classpath*:sql/*-schema.sql
       data: classpath*:sql/*-data.sql
