@@ -3,7 +3,7 @@ option=$1
 
 ########dependency-cli.jar path########
 jar_path=$(dirname $(readlink -f $0))/lib/dependency-cli.jar
-compare='^-c[j]?$'
+compare='^-c[jb]?$'
 parse='^-p[j]?$'
 version='^-v$'
 #############debug############
