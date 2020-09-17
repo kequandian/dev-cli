@@ -2,6 +2,53 @@
 Some tiny script tools in cli maner
 
 ### current cli
+- db-excel
+>Used to convert database structrue into Excel report
+
+>Tips：[Python](https://www.python.org/downloads/release/python-385/) must be installed first
+
+0. switch to this directory
+
+```bash
+$ cd dev-cli
+```
+
+1. install **pymysql**
+
+```shell
+$ pip3 install pymysql
+```
+
+    2. install **openpyxl**
+
+```shell
+$ pip3 install openpyxl
+```
+
+3. edit database information
+
+```shell
+$ vim dicToExcel.py
+......
+initial_info = {
+	'host':'120.78.88.12',
+	'port':3306,
+	'username':'root',
+	'password':'root',
+	'database':'test',
+	'charset' :'utf8',
+	'savepath':'D:\\Desktop\\am.xlsx',
+	'table_head':('字段名','数据类型','备注')
+}
+......
+```
+
+4. execute script
+
+```shell
+$ python dicToExcel.py
+```
+
 - deployless  
 > used to deploy local target/maven-build-jar.jar
 

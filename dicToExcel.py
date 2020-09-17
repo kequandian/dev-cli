@@ -6,11 +6,11 @@ import pymysql
 import openpyxl
 
 initial_info = {
-	'host':'120.78.88.79',
+	'host':'120.78.88.12',
 	'port':3306,
 	'username':'root',
-	'password':'zb2014',
-	'database':'am',
+	'password':'root',
+	'database':'test',
 	'charset' :'utf8',
 	'savepath':'D:\\Desktop\\am.xlsx',
 	'table_head':('字段名','数据类型','备注')

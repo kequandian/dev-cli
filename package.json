@@ -12,7 +12,8 @@
         "deployless": "./deployless.sh",
         "remote": "./remote",
         "standalone": "./standalone",
-	"pdf-page": "./pdf-page.sh",
-        "dependency": "./dependency.sh"
+	    "pdf-page": "./pdf-page.sh",
+        "dependency": "./dependency.sh",
+        "db-excel": "./dicToExcel.py"
     }
 }
