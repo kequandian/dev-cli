@@ -19,7 +19,7 @@ $ cd dev-cli
 $ pip3 install pymysql
 ```
 
-    2. install **openpyxl**
+2. install **openpyxl**
 
 ```shell
 $ pip3 install openpyxl
