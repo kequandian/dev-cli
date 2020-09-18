@@ -19,7 +19,7 @@ initial_info = {
 }
 show_tables_sql = 'show tables'
 desc_tables_sql = "select COLUMN_NAME,DATA_TYPE,ifnull(ifnull(CHARACTER_MAXIMUM_LENGTH,NUMERIC_PRECISION),''), COLUMN_COMMENT from information_schema.columns where table_schema = '%s' and table_name = '%s'"
-
+ignore_field = ['text','bigint']
 
 def get_connection():
     connection = pymysql.Connect(host=initial_info['host'], port=initial_info['port'],
@@ -52,7 +52,7 @@ if __name__ == '__main__':
         list.append(table_t)
         list.append(initial_info['table_head'])
         for r in cursor.fetchall():
-            result = (r[0],str(r[1] + ('(' + r[2] + ')' if (r[2] != '') else '')),r[3]);
+            result = (r[0],str(r[1] + ('(' + r[2] + ')' if (r[1] not in ignore_field and r[2] != '') else '')),r[3]);
             list.append(result)
         list.append(('', '', ''))
 
