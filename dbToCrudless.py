@@ -16,7 +16,7 @@ show_tables_sql = 'show tables'
 desc_tables_sql = "select COLUMN_NAME,COLUMN_KEY,COLUMN_TYPE,COLUMN_DEFAULT,IS_NULLABLE,COLUMN_COMMENT from information_schema.columns where table_schema = '%s' and table_name = '%s'"
 fields = {}
 pages = {'fields': fields}
-yml = {'fields': fields}
+yml = {'form':{'column':2},'list':{'search': {'fields': [{'label': '搜索','field':'search','type':'input'}],'actions': [{'title':'新建','type':'add','scope':'top'},{'title':'详情','type':'view','outside':'true'},{'title':'编辑','type':'edit','outside':'false'},{'title':'删除','type':'delete','outside':'false'}]}},'fields': fields}
 
 def usage(argv):
     try:
@@ -50,15 +50,17 @@ def collect_yaml(tablename):
     fields[tablename] = []
     cursor.execute(desc_table)
     for r in cursor.fetchall():
-        sql={'sql': {
+        sql={
             'type': r[2],
-            'unique': True if (r[1] == 'PRI') else False,
-            'notnull': True if (r[4] == 'NO') else False,
             'comment': r[5]
-        }}
-        if not r[3] is None:
-            sql['sql']['default'] = r[3]
-        field={r[0]: sql}
+        }
+        if (r[1] == 'PRI'):
+            sql['unique'] = True
+        elif (r[4] == 'NO'):
+            sql['notnull'] = True
+        elif not r[3] is None:
+            sql['default'] = r[3]
+        field={r[0]: {'sql':sql,'label':r[5],'type':'input','props':{'placeholder':'请输入'},'rules':{'type':'required','message':'请输入'},'scope':['list','view','new','edit']}}
         fields[tablename].append(field)
     
 def collect_all_yaml():
