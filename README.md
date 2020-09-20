@@ -2,6 +2,44 @@
 Some tiny script tools in cli maner
 
 ### current cli
+- db-crudless-yaml
+>Used to convert database structrue into yaml(crudless format) report
+
+>Tips：[Python](https://www.python.org/downloads/release/python-385/) must be installed first
+
+0. switch to this directory
+
+```bash
+$ cd dev-cli
+```
+
+1. install **pymysql**
+
+```shell
+$ pip3 install pymysql
+```
+
+2. install **pyyaml**
+
+```shell
+$ pip3 install pyyaml
+```
+
+3. view script help
+
+```shell
+$ python dbToCrudless.py --help
+dbToCrudless.py -d <database> -t <table> -s <savepath>
+```
+
+4. execute script
+
+>If **DON'T** add the '-s --savepath' option, it will be **output to the command line** by default.
+
+```shell
+$ python dbToCrudless.py -d test -t user -s d:\\desktop\\crudless.yaml
+```
+
 - db-excel
 >Used to convert database structrue into Excel report
 
