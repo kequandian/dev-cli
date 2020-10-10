@@ -20,6 +20,7 @@ if(!$dir || !$cmd){
     print "   cleangit .      -- clean all the .git dir in current dir\n";
     print "   mirror <target> [mirror] -- mirror current repo into a mirror repo\n";
     print "   mirrorback <target> [imrror] -- mirror repo into current target\n";
+    print "   mirrorinit <target> [imrror] -- init mirror repo within devops\@git.smallsaas.cn\n";
     exit(0);
 }
 
@@ -85,7 +86,7 @@ if($cmd eq "xfr"){
       }## foreach
    }
 
-}elsif($cmd eq 'mirror' || $cmd eq 'mirrorback'){
+}elsif($cmd eq 'mirror' || $cmd eq 'mirrorback' || $cmd eq 'mirrorinit'){
    chdir $dir;  ## <target>
    my $target=$dir;
    my $mirror_repo = $param;
@@ -103,7 +104,7 @@ if($cmd eq "xfr"){
          my $local_repo = get_local_repo();
          $local_repo =~ /\/([\w\.\-_]+)$/;
 
-         $mirror_repo="devops\@zele.pro:/home/devops/mirror/$1";
+         $mirror_repo="devops\@git.smallsaas.cn:/home/devops/mirror/$1";
          #print "mirror: $mirror_repo\n";
 
          print "Usage: remote mirror $target $mirror_repo\n";
@@ -143,6 +144,11 @@ if($cmd eq "xfr"){
       print `git pull origin master`;
       print "git remote set-url origin $local_repo\n";
       print `git remote set-url origin $local_repo`;
+
+   }elsif($cmd eq 'mirrorinit'){
+      my $repo_name = get_local_repo_name();
+      print "ssh devops\@git.smallsaas.cn \"cd mirror && git init --bare $repo_name\"\n";
+      print `ssh devops\@git.smallsaas.cn "cd mirror && git init --bare $repo_name"`;
    }
 
    print "\n";
