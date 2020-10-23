@@ -12,8 +12,10 @@
         "deployless": "./deployless.sh",
         "remote": "./remote",
         "standalone": "./standalone",
-	    "pdf-page": "./pdf-page.sh",
+        "pdf-page": "./pdf-page.sh",
         "dependency": "./dependency.sh",
-        "db-excel": "./dicToExcel.py"
+        "db-excel": "./dicToExcel.py",
+        "db-crudless": "./dbToCrudless.py",
+		"db-diff": "./db-diff.sh"
     }
 }
