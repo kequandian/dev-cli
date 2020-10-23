@@ -1,5 +1,8 @@
 ## dev cli
-Some tiny script tools in cli maner
+Some tiny script tools in cli maner, install all the tools as below line
+```shell
+$ npm i -g
+```
 
 ### current cli
 - db-crudless-yaml

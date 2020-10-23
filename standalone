@@ -9,16 +9,17 @@ else
    server_port='--server.port=8080'
 fi
 
-dir=''
-os_name=$(uname)
-if [[ $os_name == 'Darwin' ]]; then
-   dir=$(greadlink -f "$0")
+readlink_fix=()
+if [[ $(uname) == 'Darwin' ]]; then
+   #dir=$(greadlink -f "$0")
+   readlink_fix=greadlink
 else
-   dir=$(readlink -f "$0")
+   #dir=$(readlink -f "$0")
+   readlink_fix=readlink
 fi
 
 ### start ###
-#dir=$(readlink -f "$0")
+dir=$($readlink_fix -f "$0")
 dir=$(dirname $dir)
 
 ## check in target dir
@@ -49,11 +50,12 @@ if [ ! -e ./pom.xml ];then
 fi
 
 
-if [[ $1 = "init" ]] || [[ $2 = "init" ]];then
-	sed -i 's/initialize: false/initialize: true/' ./config/application.yml
-else
-	sed -i 's/initialize: true/initialize: false/' ./config/application.yml
-fi
+## do not force initialize, comment out
+#if [[ $1 = "init" ]] || [[ $2 = "init" ]];then
+#	sed -i 's/initialize: false/initialize: true/' ./config/application.yml
+#else
+#	sed -i 's/initialize: true/initialize: false/' ./config/application.yml
+#fi
 
 standalone=$(ls *-standalone.jar)
 
