@@ -33,3 +33,5 @@ if [ -d ./web/dist ];then
 else
    echo warning: no ./web/dist found !
 fi
+
+## todo, add database dump script
