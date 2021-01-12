@@ -35,12 +35,8 @@ else
    echo warning: no ./web/dist found !
 fi
 
-<<<<<<< HEAD
-## todo, add database dump script
-=======
 echo '=> add api/app.jar or web/dist manually'
 echo tar -uvf $target ./api/app.jar
 echo tar -uvf $target ./web/dist
 echo '=>find target *.jar to append'
 echo 'find . -name "*.jar" | grep -v WEB-INF/lib'
->>>>>>> 1edb5437d797b083689656976f2afc8ee6a175c4

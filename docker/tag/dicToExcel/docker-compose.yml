@@ -1,0 +1,7 @@
+version: '3.4'
+services:
+  dictoexcel:
+    image: dictoexcel
+    build:
+      context: ../../../
+      dockerfile: ./docker/tag/dicToExcel/Dockerfile

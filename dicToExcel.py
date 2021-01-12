@@ -8,15 +8,16 @@ import sys
 import codecs
 sys.stdout = codecs.getwriter("utf-8")(sys.stdout.detach())
 initial_info = {
-    'host': 'localhost',
-    'port': 3306,
+    'host': '192.168.3.236',
+    'port': 3307,
     'username': 'root',
     'password': 'root',
-    'database': 'test',
+    'database': 'cg',
     'charset': 'utf8mb4',
-    'savepath': 'D:\\Desktop\\db.xlsx',
-    'table_head': ('字段名', '数据类型', '备注')
+    'savepath': '/var/tmp/db.xlsx',
 }
+
+table_head = ('字段名', '数据类型', '备注')
 show_tables_sql = 'show tables'
 desc_tables_sql = "select COLUMN_NAME,DATA_TYPE,ifnull(ifnull(CHARACTER_MAXIMUM_LENGTH,NUMERIC_PRECISION),''), COLUMN_COMMENT from information_schema.columns where table_schema = '%s' and table_name = '%s'"
 ignore_field = ['text','bigint']
@@ -50,7 +51,7 @@ if __name__ == '__main__':
         cursor.execute(desc_table)
         table_t = (str(tablename + "表"), '', '')
         list.append(table_t)
-        list.append(initial_info['table_head'])
+        list.append(table_head)
         for r in cursor.fetchall():
             result = (r[0],str(r[1] + ('(' + r[2] + ')' if (r[1] not in ignore_field and r[2] != '') else '')),r[3]);
             list.append(result)
