@@ -41,8 +41,8 @@ if [ ! -e config ]; then
    mkdir config
 fi
 
-if [ ! -e ./config/application.yml ]; then
-   cp $dir/standalone.yml ./config/application.yml
+if [ ! -e ./config/application-standalone.yml ]; then
+   cp $dir/standalone.yml ./config/application-standalone.yml
 fi
 
 if [ ! -e ./pom.xml ];then

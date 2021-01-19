@@ -16,6 +16,6 @@
         "dependency": "./dependency.sh",
         "db-excel": "./dicToExcel.py",
         "db-crudless": "./dbToCrudless.py",
-		"db-diff": "./db-diff.sh"
+        "db-diff": "./db-diff.sh"
     }
 }
