@@ -1,0 +1,167 @@
+#!/bin/sh
+# -Dmdep.useBaseVersion=true
+# mdep.useBaseVersion=true will remove timestamps from snapshot builds.
+usage() {
+	cat <<- EOF
+    Usage: dependency-copy [OPTIONS] <group:artifact:version[:packaging:classifier]>
+    e.g:  dependency-copy com.jfeat:webjar:1.0:jar:RELEASE
+
+    OPTIONS:
+      -h --help      -- print usage
+      -d --lib       -- deploy as lib into local fatjar
+      -r --run       -- automatically run the dependency within fatjar
+	EOF
+	exit
+}
+
+## check options
+lib_opt=$9
+run_opt=$9
+force_opt='-f'  ## force to add new lib
+for opt in $@;do
+   if [[ $opt = '-h' || $opt = '--help' ]];then 
+      usage
+   elif [[ $opt = '-d' || $opt = '--lib' ]];then 
+      lib_opt=$opt
+   elif [[ $opt = '-r' || $opt = '--run' ]];then
+      run_opt=$opt
+      lib_opt=$opt
+   else 
+      ARTIFACT=$opt
+   fi
+done
+if [ ! $ARTIFACT ];then
+   usage
+fi
+
+
+artifact=${ARTIFACT#*:}
+artifact=${artifact%%:*}
+artifact_version=${ARTIFACT#*:}
+artifact_version=${artifact_version#*:}
+artifact_version=${artifact_version%%:*}
+artifact_packaging=${ARTIFACT##*:}
+if [[ $artifact_packaging = 'jar' || $artifact_packaging = $artifact_version ]];then
+  unset artifact_packaging
+else
+  artifact_packaging="-$artifact_packaging"
+fi
+artifact="$artifact-$artifact_version$artifact_packaging.jar"
+artifact_lib="BOOT-INF/lib/$artifact-$artifact_version$artifact_packaging.jar"
+
+if [ -f $artifact ];then
+   artifact=$artifact
+elif [[ $lib_opt && -f $artifact_lib ]];then
+   artifact=$artifact_lib
+else
+   echo mvn org.apache.maven.plugins:maven-dependency-plugin:3.2.0:copy -Dartifact=$ARTIFACT -DoutputDirectory=./
+   mvn org.apache.maven.plugins:maven-dependency-plugin:3.2.0:copy -Dartifact=$ARTIFACT -DoutputDirectory=./
+   # echo mvn dependency:copy -Dartifact=$ARTIFACT -DoutputDirectory=.
+   # mvn dependency:copy -Dartifact=$ARTIFACT -DoutputDirectory=.
+fi
+## deploy lib
+if [[ ${#@} = 1 &&  -f $artifact ]];then
+   ls $artifact
+   exit
+fi
+ls $artifact
+
+putlocaljar() {
+    app=$1
+    lib=$2
+    force_opt=$3
+    
+    ## main ##
+    ext=${app##*.}
+    jarlib=$(basename $lib)
+    jarok=$(jar tf $app | grep $jarlib)
+        
+    if [ ! $jarok ];then
+        if [[ $force_opt && $force_opt = '-f' ]];then
+        ## means new jar
+        ## .war for WEB-INF, .jar for BOOT-INF
+        local INF
+        if [ $ext = 'war' ];then
+            INF=WEB-INF
+        else
+            INF=BOOT-INF 
+        fi
+        echo "$INF/lib/$jarlib"
+        jarok="$INF/lib/$jarlib"
+        else
+        echo "$jarlib no found in $app, use '-f' to force to add into" > /dev/stderr
+        continue
+        fi
+    fi
+
+    if [ $jarok ];then
+        ## prepare jarok
+        if [ ! -f $jarok ];then
+            jardir=$(dirname $jarok)
+            if [ ! -d $jardir ];then
+                echo mkdir -p $jardir > /dev/stderr
+                mkdir -p $jardir
+            fi
+            echo cp $lib $jardir > /dev/stderr
+            cp $lib $jardir
+        fi
+
+        ## update
+        echo jar 0uf $app $jarok
+        jar 0uf $app $jarok
+
+        ## rm after jar updated
+        echo rm -f $jarok
+        rm -f $jarok
+      #   echo rmdir BOOT-INF/lib
+        rmdir BOOT-INF/lib 2> /dev/null
+      #   echo rmdir BOOT-INF
+        rmdir BOOT-INF 2> /dev/null
+    fi
+}
+
+## the the only standalone
+search_one() {
+  pattern=$1
+  result=$(ls $pattern 2> /dev/null)
+  if [ -z "$result" ];then
+    echo no $pattern files found ! > /dev/stderr
+    exit
+  fi
+  declare -a result_arr
+  for i in $result;do
+     result_arr+=($i)
+  done
+  if [ ${#result_arr[@]} -eq 1 ];then
+     echo $result
+  fi
+}
+
+standalone=$(search_one "*-standalone.jar *-all.jar *-RELEASE.jar app.jar")
+if [ ! $standalone ];then
+   ## copy dev-starter first
+   DEV_STARTER_ARTIFACT='com.jfeat:dev-starter:1.0:jar:RELEASE'
+   echo mvn org.apache.maven.plugins:maven-dependency-plugin:3.2.0:copy -Dartifact=$DEV_STARTER_ARTIFACT -DoutputDirectory=./
+   mvn org.apache.maven.plugins:maven-dependency-plugin:3.2.0:copy -Dartifact=$DEV_STARTER_ARTIFACT -DoutputDirectory=./
+   standalone=$(search_one "*-standalone.jar *-all.jar *-RELEASE.jar app.jar")
+fi
+if [ ! $standalone ];then
+   echo no fatjar found !
+   exit 1
+fi
+
+## for deploying lib
+if [[ $lib_opt || $run_opt ]];then
+    ls $standalone
+    ls $artifact
+    echo "start to deploy $artifact ..."
+    putlocaljar $standalone $artifact $force_opt
+    echo 'done!'
+    jar tf $standalone | grep $artifact
+fi
+
+## run dependency within fatjar 
+if [ $run_opt ];then
+   echo java -jar $standalone --server.port=8080
+   java -jar $standalone --server.port=8080
+fi

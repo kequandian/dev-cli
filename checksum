@@ -1,0 +1,106 @@
+#!/bin/sh
+ARTIFACT='com.tools:checksum:RELEASE'
+artifact='checksum-RELEASE.jar'
+artifact="/var/tmp/$artifact"
+
+getchecksumjar(){
+   if [ ! -f $artifact ];then
+      mvn org.apache.maven.plugins:maven-dependency-plugin:3.2.0:copy -Dartifact=$ARTIFACT -DoutputDirectory=/var/tmp
+   fi
+   if [ ! -f $artifact ];then
+      echo fail to mvn copy $ARTIFACT > /dev/stderr
+      usage
+   fi
+}
+getchecksumjar
+
+
+## main
+
+usage(){
+   cat <<- EOF
+	EOF
+ 	cat <<- EOF
+    usage: checksum [OPTIONS]
+
+    OPTIONS:
+      -h                      --print usage
+      -j                      --print out java usage
+         --cmd                --print out java cmd line
+      -f        <target>      --specific target file
+	EOF
+	exit
+}
+
+## check options
+target=$9
+target_opt=$9
+checksum_opt=$9
+cmd_opt=$9
+java_usage=$9
+for opt in $@;do
+   if [ $opt = '-h' ];then 
+      usage
+   elif [ $opt = '-j' ];then 
+      ## print out java usage
+      java_usage=$opt
+   elif [ $opt = '--cmd' ];then 
+      ## print out java cmdline 
+      cmd_opt=$opt
+   elif [ $opt = '-f' ];then
+      target_opt=$opt
+   elif [ $target_opt ];then
+      unset target_opt
+      target=$opt
+   elif [ ! $target_opt ];then
+      checksum_opt=$opt
+   fi
+done
+# check target opt
+if [ $target_opt ];then
+   if [ ! $target ];then
+      usage
+   fi
+fi
+if [ ! -f $target ];then 
+   echo $target is not type of file !
+   exit
+fi
+
+
+## print out java usage
+if [ $java_usage ];then
+   java -jar $artifact $target
+   exit
+fi
+
+## find target local
+target_list=()
+if [ ! $target ];then
+   target_ls=$(ls 2> /dev/null)
+   if [ -z "$target_ls" ];then 
+      usage
+   fi
+
+   for tt in $target_ls;do
+      if [ -d $tt ];then 
+         continue
+      fi
+      target=$tt
+      target_list+=($target)
+  done
+fi
+
+if [[ ${#target_list[@]} > 1 ]];then 
+   for ff in ${target_list[@]};do
+      echo $ff
+   done
+   exit
+fi
+
+
+## start
+if [ $cmd_opt ];then 
+  echo java -jar $artifact $target $checksum_opt
+fi
+java -jar $artifact $target $checksum_opt

@@ -1,0 +1,86 @@
+#!/usr/bin/env bash
+#ARTIFACT='com.tools:dev-dependency:1.0:jar:all'
+ARTIFACT='com.tools:dev-dependency:1.0:jar'
+artifact='dev-dependency-1.0.jar'
+artifact_ls="/var/tmp/$artifact"
+artifact_cli='fatjar-cfr'
+
+readdir(){
+  bin=$1
+  local dir=$(which $1)
+        dir=${dir%/*}
+  if [ -d $dir/node_modules/dev-cli ];then
+     dir=$dir/node_modules/dev-cli
+  fi
+  if [[ $(uname -s) = Darwin ]];then
+     dir=${dir%/*}/lib/node_modules/dev-cli
+  fi
+  echo $dir
+}
+
+getartifact(){
+   if [ ! -d /var/tmp ];then
+      mkdir -p /var/tmp
+   fi
+   if [ ! -f $artifact_ls ];then
+      mvn org.apache.maven.plugins:maven-dependency-plugin:3.2.0:copy -Dartifact=$ARTIFACT -DoutputDirectory=/var/tmp
+   fi
+   if [ ! -f $artifact_ls ];then
+      local dir="$(readdir $artifact_cli)"
+
+      echo fail to mvn copy $ARTIFACT > /dev/stderr
+      echo "1> cp $dir/lib/$artifact ./$artifact_ls" > /dev/stderr
+      cp $dir/lib/$artifact ./$artifact_ls
+   fi
+}
+
+if [ ! -f $artifact_ls ];then
+   getartifact
+fi
+
+
+## main
+usage(){
+   echo 'fatjar-cfr <fatjar> [entry] [pattern]'
+   exit 1
+}
+
+fatjar_opt=$9
+entry_opt=$9
+pattern_opt=$9
+for opt in $@;do
+   if [ $entry_opt ];then
+      pattern_opt=$opt
+   elif [ $fatjar_opt ];then 
+      pattern_opt=$opt
+      entry_opt=$opt
+   else 
+      fatjar_opt=$opt
+   fi
+done
+# echo entry_opt=$entry_opt, pattern_opt=$pattern_opt
+
+## ensure fatjar
+if [ ! $fatjar_opt ];then 
+   usage
+fi
+
+## update pattern_opt
+if [ $entry_opt ];then 
+   if [ $pattern_opt != $entry_opt ];then 
+      pattern_opt="$entry_opt!$pattern_opt"
+   fi
+fi
+
+if [ $pattern_opt ];then 
+   pattern_arg="-i $pattern_opt"
+fi
+
+if [ $pattern_opt ];then
+   # echo java -jar $artifact_ls $fatjar_opt $checksum_opt $pattern_arg
+   java -jar $artifact_ls $fatjar_opt $checksum_opt $pattern_arg
+else
+   # echo java -jar $artifact_ls $fatjar_opt $checksum_opt -T
+   java -jar $artifact_ls $fatjar_opt $checksum_opt -T
+fi
+

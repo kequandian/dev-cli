@@ -1,0 +1,17 @@
+---
+spring:
+  profiles: dev
+  datasource:
+    url: jdbc:mysql://db.webtools.io:3306/smallsaas_dev?autoReconnect=true&useSSL=false&useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&zeroDateTimeBehavior=convertToNull
+    username: root
+    password: Nhy6%tgb
+    # driver-class-name: com.mysql.cj.jdbc.Driver
+    filters: log4j,wall,mergeStat
+    sql-script-encoding: UTF-8
+    schema: classpath*:sql/**/*-schema.sql
+    data: classpath*:sql/**/*-data.sql
+    initialize: false
+
+logging:
+  level: debug
+  file: logs/access.log

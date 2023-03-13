@@ -1,0 +1,176 @@
+#!/usr/bin/env bash
+
+usage() {
+	cat <<- EOF
+	
+   Usage: webjar [OPTIONS] <target>
+     
+   OPTIONS:
+      -h --help      -- print usage
+      -t --tag       -- tag for target webjar
+      -r --run       -- directly run the jar
+      -o --out       -- output webjar-1.0-RELEASE.jar
+	EOF
+	exit
+}
+
+WEBJAR_ARTIFACT='com.jfeat:webjar:1.0:jar:RELEASE'
+webjar_artifact='webjar-1.0-RELEASE.jar'
+
+
+## get taged new artifact name
+tagedwebjar_func(){
+   tag=$1
+   if [ $tag ];then
+      local webjarname=${webjar_artifact%%-*}
+      webjarname=$webjarname-$tag.jar
+      echo $webjarname
+   else
+      echo $webjar_artifact
+   fi
+}
+
+## get webjar-1.0-RELEASE.jar 
+preparewebjar(){
+   tag=$1
+   local tagedwebjar=$webjar_artifact
+   if [ $tag ];then
+      tagedwebjar=$(tagedwebjar_func $tag)
+   fi
+   if [[ -f $webjar_artifact && ! -f $tagedwebjar ]];then
+      mv $webjar_artifact $tagedwebjar
+   fi
+
+   if [[ ! -f $tagedwebjar ]];then
+      echo mvn org.apache.maven.plugins:maven-dependency-plugin:3.2.0:copy -Dartifact=$WEBJAR_ARTIFACT -DoutputDirectory=./
+      mvn org.apache.maven.plugins:maven-dependency-plugin:3.2.0:copy -Dartifact=$WEBJAR_ARTIFACT -DoutputDirectory=./
+
+      if [ ! -f $webjar_artifact ];then
+         echo fail to mvn copy $WEBJAR_ARTIFACT > /dev/stderr
+         echo "1> cp $dir/lib/_webjar.jar ./$webjar_artifact" > /dev/stderr
+         cp $dir/lib/_webjar.jar ./$webjar_artifact
+      fi
+   fi
+}
+
+appenddist(){
+   target=$1
+   tag=$2
+   run=$3
+   debug=$4
+   if [[ $tag = '--' ]];then
+     unset tag
+   fi
+
+   CLASSPATH='BOOT-INF/classes/META-INF/resources'
+   if [ ! $debug ];then
+      if [ -d $CLASSPATH ];then
+         rm -rf $CLASSPATH
+      fi
+      if [ -d $CLASSPATH ];then
+         echo fail to remove $CLASSPATH
+         exit
+      fi
+   fi
+
+   if [ ! -d $CLASSPATH ];then
+      echo mkdir -p $CLASSPATH
+      mkdir -p $CLASSPATH
+   fi
+   echo cp -r $target/* $CLASSPATH
+   if [ ! $debug ];then
+     cp -r $target/* $CLASSPATH
+   fi
+
+   allfiles=$(find $CLASSPATH 2> /dev/null )
+
+   list=()
+   for fd in $allfiles;do
+      if [ -d $fd ];then 
+         continue
+      fi
+      fd="${fd%$'\n'} "
+      list+=${fd}
+   done
+
+   local tagedwebjar=$webjar_artifact
+   if [ $tag ];then
+      tagedwebjar=$(tagedwebjar_func $tag)
+      if [ ! -f $tagedwebjar ];then
+         mv $webjar_artifact $tagedwebjar
+      fi
+   fi
+
+   # echo jar -0uf $tagedwebjar ${list[@]}
+   echo jar -0uf $tagedwebjar $target
+   jar -0uf $tagedwebjar ${list[@]}
+
+   ## clean up 
+   rm -rf BOOT-INF/classes/META-INF/resources
+   rmdir BOOT-INF/classes/META-INF 2> /dev/null
+   rmdir BOOT-INF/classes 2> /dev/null
+   rmdir BOOT-INF 2> /dev/null
+
+   # run 
+   if [ $run ];then
+      echo java -jar $tagedwebjar --server.port=8080
+      java -jar $tagedwebjar --server.port=8080
+   fi
+}
+
+readdir(){
+  bin=$1
+  local dir=$(which $1)
+        dir=${dir%/*}
+  if [ -d $dir/node_modules/dev-cli ];then
+     dir=$dir/node_modules/dev-cli
+  fi
+  if [[ $(uname -s) = Darwin ]];then
+     dir=${dir%/*}/lib/node_modules/dev-cli
+  fi
+  echo $dir
+}
+
+## main
+target=$9
+tag=$9
+tag_opt=$9
+run_opt=$9
+out_opt=$9
+for opt in $@;do
+   if [[ $opt = '-h' || $opt = '--help' ]];then 
+      usage
+   elif [[ $opt = '-t' || $opt = '--tag' ]];then 
+      tag_opt=$opt
+   elif [[ $opt = '-r' || $opt = '--run' ]];then 
+      run_opt=$opt
+   elif [[ $opt = '-o' || $opt = '--out' ]];then 
+      out_opt=$opt      
+   elif [ $tag_opt ];then
+      tag=$opt
+      unset tag_opt
+   else 
+      target=$opt
+   fi
+done
+
+if [ $out_opt ];then
+   preparewebjar
+   exit
+fi
+
+if [ ! $target ];then 
+   usage
+fi
+
+if [ ! -d $target ];then 
+   echo "dir '$target' not exists !"
+   usage
+fi
+
+dir="$(readdir webjar)"
+preparewebjar $tag
+if [ ! $tag ];then
+   tag='--'  ## means nothing
+fi
+appenddist $target $tag $run_opt

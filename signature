@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+ARTIFACT='com.tools:signature:1.0:jar:RELEASE'
+artifact='signature-1.0-RELEASE.jar'
+artifact_ls="/var/tmp/$artifact"
+artifact_cli='signature'
+
+readdir(){
+  bin=$1
+  local dir=$(which $1)
+        dir=${dir%/*}
+  if [ -d $dir/node_modules/dev-cli ];then
+     dir=$dir/node_modules/dev-cli
+  fi
+  if [[ $(uname -s) = Darwin ]];then
+     dir=${dir%/*}/lib/node_modules/dev-cli
+  fi
+  echo $dir
+}
+
+getartifact(){
+   if [ ! -d /var/tmp ];then
+      mkdir -p /var/tmp
+   fi 
+   if [ ! -f $artifact_ls ];then
+      mvn org.apache.maven.plugins:maven-dependency-plugin:3.2.0:copy -Dartifact=$ARTIFACT -DoutputDirectory=/var/tmp
+   fi
+   if [ ! -f $artifact_ls ];then
+      local dir="$(readdir $artifact_cli)"
+
+      echo fail to mvn copy $ARTIFACT > /dev/stderr
+      echo "1> cp $dir/lib/$artifact ./$artifact_ls" > /dev/stderr
+      cp $dir/lib/$artifact ./$artifact_ls
+   fi
+}
+
+if [ ! -f $artifact_ls ];then
+   getartifact
+fi
+
+## run jar 
+java -jar $artifact_ls $@
