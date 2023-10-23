@@ -36,7 +36,6 @@
         "checksum-diff": "./checksum-diff.sh",
         "checksum": "./checksum",
         "crc32sum":"./crc32sum",
-        "md5sum":"./md5sum",
         "sha256sum":"./sha256sum",
         "hosts":"./hosts",
         "deploy-lib":"./deploy-lib.sh",
