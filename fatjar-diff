@@ -47,9 +47,9 @@ usage(){
    exit 1
 }
 
-fatjar_opt=$9
-fatjar2_opt=$9
-checksum_opt=$9
+fatjar_opt=
+fatjar2_opt=
+checksum_opt=
 for opt in $@;do
    if [[ $opt = '-c' || $opt = '--checksum' ]];then
       checksum_opt=$opt 
