@@ -78,10 +78,12 @@ ensureConfig(){
       # specific target applicatin.yml first 
       if [ -f $yml_dir/standalone-$target.yml ];then
          if [ ! -f ./config/application-$target.yml ]; then
+            echo cp $yml_dir/standalone-$target.yml ./config/application-$target.yml
             cp $yml_dir/standalone-$target.yml ./config/application-$target.yml
          fi
       else
          if [ ! -f ./config/application.yml ]; then
+            echo cp $yml_dir/standalone.yml ./config/application.yml
             cp $yml_dir/standalone.yml ./config/application.yml
          fi
       fi
@@ -105,10 +107,10 @@ ensureConfig(){
       if [[ ! $app_dir = '.' ]];then
          if [ -d $app_dir/config ];then
             if [ -f ./config/application-$target.yml ];then
-               # echo "cp config/application.yml $app_dir/config/application-$target.yml"
+               echo "cp config/application.yml $app_dir/config/application-$target.yml"
                cp ./config/application-$target.yml $app_dir/config/application-$target.yml
             else
-               # echo "cp config/application.yml $app_dir/config/application-$target.yml"
+               echo "cp config/application.yml $app_dir/config/application-$target.yml"
                cp ./config/application.yml $app_dir/config/application-$target.yml
             fi
          fi
@@ -161,12 +163,23 @@ readdir(){
   bin=$1
   local dir=$(which $1)
         dir=${dir%/*}
+
+  ## fix softlink
   if [ -d $dir/node_modules/dev-cli ];then
      dir=$dir/node_modules/dev-cli
   fi
+  #once again
+  if [ -d $(dirname $dir)/lib/node_modules/dev-cli ];then
+     dir=$(dirname $dir)/lib/node_modules/dev-cli
+  fi
+  ## end fix softlink
+
+  # fix Darwin
   if [[ $(uname -s) = Darwin ]];then
      dir=${dir%/*}/lib/node_modules/dev-cli
   fi
+  ## end fix Darwin
+
   echo $dir
 }
 
@@ -228,6 +241,7 @@ if [ $target ];then
    if [[ $app_dir = $standalone ]];then
       app_dir='.'
    fi
+#   echo ensureConfig $app_dir $dir
   ensureConfig $app_dir $dir
 fi
 

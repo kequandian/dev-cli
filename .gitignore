@@ -1,5 +1,6 @@
 node_modules/
 *DEPLOY-SNAPSHOT.tar
+target/
 .idea/
 .classpath
 .factorypath
