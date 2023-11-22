@@ -22,16 +22,16 @@ Usage: standalone [OPTIONS] [TARGET]
 }
 
 opt=$1
-target=$9
-port_opt=$9
-port=$9
+target=
+port_opt=
+port=
 server_port='--server.port=8080'
-debug_x=$9
+debug_x=
 debug_port='5005'
-h2_opt=$9
+h2_opt=
 H2_VER_JAR='h2-1.4.200.jar'
-target_yml=$9  ## target for application.yml
-config_only_opt=$9
+target_yml=  ## target for application.yml
+config_only_opt=
 
 for opt in $@;do
    if [[ $opt = '-h' || $opt = '--help' ]];then 
@@ -175,8 +175,10 @@ readdir(){
   ## end fix softlink
 
   # fix Darwin
-  if [[ $(uname -s) = Darwin ]];then
-     dir=${dir%/*}/lib/node_modules/dev-cli
+  if [ ! -d $dir ];then
+    if [[ $(uname -s) = Darwin ]];then
+       dir=${dir%/*}/lib/node_modules/dev-cli
+    fi
   fi
   ## end fix Darwin
 
