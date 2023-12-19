@@ -33,6 +33,7 @@
         "fatjar-find": "./fatjar-find",
         "fatjar-diff": "./fatjar-diff",
         "fatjar-cfr": "./fatjar-cfr",
+        "fatjar-cfr-auto": "./fatjar-cfr-auto",
         "checksum-diff": "./checksum-diff.sh",
         "checksum": "./checksum",
         "crc32sum": "./crc32sum",

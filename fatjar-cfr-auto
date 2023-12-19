@@ -1,0 +1,45 @@
+#!/bin/sh
+
+jar=$1
+if [ ! -f $jar ];then
+  echo $jar not exist !
+  exit -1
+fi
+jar_root=${jar%.jar}
+jar_base=$(basename $jar_root)
+if [ ! -d $jar_base ];then
+   mkdir $jar_base
+fi
+
+
+for entry in $(fatjar-cfr $jar);do
+   #stage making dir
+   entry_base=${entry%\/*}
+   #echo entry_base=$entry_base  entry=$entry
+   if [ "$entry_base"x != "$entry"x ];then
+    entry_path=$jar_base/$entry_base
+    if [ ! -d "$entry_path" ];then 
+       mkdir -p $entry_path
+    fi
+   fi
+
+         
+   #stage cfr
+   entry_path="$jar_base/$entry"
+
+   ## replase .class to .java
+   entry_base=${entry_path%.*}
+   entry_ext=${entry##*.}
+   if [ "$entry_ext"x = "class"x ];then
+      entry_path="$entry_base.java"
+   fi
+   #end
+
+   #echo entry_path=$entry_path
+   echo $entry
+   fatjar-cfr $jar $entry > $entry_path
+
+   if [ ! -f $entry_path ];then 
+      echo decompile $entry failure ! > /dev/stderr
+   fi
+done

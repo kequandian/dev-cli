@@ -14,3 +14,4 @@ BOOT-INF/
 META-INF/
 .vscode/
 package-lock.json
+logs/
