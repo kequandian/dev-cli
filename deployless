@@ -1,0 +1,488 @@
+#!/usr/bin/env bash
+opt=$1
+opt_value=$2
+JAR_BIN=$(which jar)
+
+usage() {
+	cat <<- EOF
+	
+	Usage: TARGET=http://endpoint:2375/container deployless [OPTIONS]
+	       TARGET=/path/to/apache-tomcat/webapps deployless [OPTIONS]
+       TARGET=http://192.168.3.200:2375 deployless [OPTIONS]
+       TARGET=192.168.3.200 deployless [OPTIONS]
+     
+   OPTIONS:
+      -h, --help                      print usage
+      -r, --restart <Container>       restart the deployed container  [default ${container}_dummy]
+      -l, --log                       showing log for the container
+      -t, --list                      list running containes, --list for all containers
+          --force                     force to deploy new jar, even no jar in the standalone
+   e.g.
+      deployless  
+      deployless -h
+      deployless -r  --restart
+      deployless -l  --log
+      deployless -t  --list
+
+	EOF
+	exit
+}
+
+deploy_opt=$9
+force=$9
+if [ $opt ];then
+   if [[ $opt = '-h' || $opt = '--help' ]];then
+      usage
+      exit
+   elif [[ $opt = '--force' ]];then 
+      force='force'
+   fi
+else 
+  deploy_opt='lib'
+fi
+
+## check ENV
+if [[ $opt && ! ${TARGET} ]];then
+   echo 'env TARGET not yet defined!'
+   echo 
+   echo "usage: TARGET=http://127.0.0.1:2375/api deployless $opt"
+   echo ' deployless -h [--help]'
+   exit
+fi
+
+
+## functions
+enablejq(){
+   curl -sO https://github.com/stedolan/jq/releases/download/jq-1.6/jq-win64.exe
+}
+
+restartcontainer() {
+   endpoint=$1
+   container=$2
+   echo curl -i -X POST $endpoint/containers/$container/restart
+   curl -i -X POST $endpoint/containers/$container/restart
+}
+
+showcontainerlogs() {
+   endpoint=$1
+   container=$2
+
+   echo "curl $endpoint/containers/$container/logs?stdout=1 --output -"
+   curl $endpoint/containers/$container/logs?stdout=1 --output -
+}
+
+listallContainers(){
+   endpoint=$1
+   _opt=$2
+
+   # jq_present=$(uname)
+   # if [[ $jq_present = MINGW64* ]];then
+   #    enablejq()
+   # fi
+
+   if [[ $_opt = 'all' ]];then 
+      echo "curl -s $endpoint/containers/json?all=true | jq '.[].Names[]|ltrimstr("/")'"
+      curl -s $endpoint/containers/json?all=true | jq '.[].Names[]|ltrimstr("/")'
+   else
+      echo "curl -s $endpoint/containers/json | jq '.[].Names[]|ltrimstr("/")'"
+      curl -s $endpoint/containers/json | jq '.[].Names[]|ltrimstr("/")'
+   fi
+   echo ''
+}
+
+workingdir(){
+   endpoint=$1
+   container=$2
+
+   # echo "curl -s $endpoint/containers/$container/json | jq '.HostConfig.Binds[] | match(\"([a-z/]+):[a-z/]*/webapps[a-z/]*\").string'"
+   # local binds=$(curl -s $endpoint/containers/$container/json | jq '.HostConfig.Binds[] | match("([a-z/]+):[a-z/]*/webapps[a-z/]*").string')
+   echo curl -s $endpoint/containers/$container/json > /dev/stderr
+   local binds=$(curl -s $endpoint/containers/$container/json | jq '.HostConfig.Binds[] | match("[a-z/]*/webapps:rw").string')
+   for bind in $binds;do
+      bind=${bind%\"}
+      bind=${bind#\"}
+      bind=${bind%:rw}
+      echo $bind
+   done
+}
+
+deploycontainerlibs() {
+   endpoint=$1
+   container=$2
+   lib=$3
+   # echo endpoint=$endpoint, container=$container, lib=$lib > /dev/stderr
+
+   # dir=$(dirname $lib)
+   # jar=$(basename $lib)
+   dir=${lib%\/*}
+   jar=${lib##*\/}
+
+   wdir=${PWD}
+   cd $dir
+   if [ ! -f $jar.tar.gz ];then
+      echo tar zcvf $jar.tar.gz $jar  > /dev/stderr
+      tar zcvf $jar.tar.gz $jar
+   fi
+   cd $wdir
+   echo "$(ls $lib.tar.gz) .. ok"
+
+   # http://localhost:2375/containers/biliya-api/archive?path=/var/tmp -H "Content-Type: application/x-tar" --data-binary @cg-core-1.0.0.jar.ta
+   working_dir=$(workingdir $endpoint $container 2> /dev/null)
+   if [ ! $working_dir ];then 
+      echo "fatal: fail to get $container info. ! " > /dev/stderr
+      exit 1
+   fi
+   # echo working_dir=$working_dir
+
+   if [ ! -f $lib.tar.gz ];then
+      echo $lib.tar.gz not found ! > /dev/stderr
+      echo ${PWD}
+      exit 1
+   fi
+
+   # echo working_dir= $working_dir
+   # curl -i -X 
+   echo curl -X PUT $endpoint/containers/$container/archive?path=$working_dir/lib -H \'Content-Type: application/x-tar\' --data-binary @$lib.tar.gz  > /dev/stderr
+   curl -X PUT $endpoint/containers/$container/archive?path=$working_dir/lib -H 'Content-Type: application/x-tar' --data-binary @$lib.tar.gz
+   
+   if [ -f $lib.tar.gz ];then
+      ## rm .tar.gz
+      # echo rm $lib.tar.gz > /dev/stderr
+      rm $lib.tar.gz
+   fi
+}
+
+deploylocalapp(){
+   echo .keep
+}
+
+deploycontainerapp() {
+   endpoint=$1
+   container=$2
+   standalone=$3
+
+   dir=${standalone%\/*}
+   app=${standalone##*\/}
+   if [[ $dir = $app ]];then
+      dir='.'
+   fi
+
+   wdir=${PWD}
+   cd $dir
+   if [ ! -f $app.tar.gz ];then
+      echo tar zcvf $app.tar.gz $app > /dev/stderr
+      tar zcvf $app.tar.gz $app
+   fi
+   cd $wdir
+
+   # http://localhost:2375/containers/biliya-api/archive?path=/var/tmp -H "Content-Type: application/x-tar" --data-binary @cg-core-1.0.0.jar.ta
+   working_dir=$(workingdir ${endpoint} ${container})
+   if [ ! $working_dir ];then 
+      echo "fatal: working_dir not valid ! " > /dev/stderr
+      exit 1
+   fi
+
+      if [ ! -f $app.tar.gz ];then
+      echo $app.tar.gz not found ! > /dev/stderr
+      echo ${PWD}
+      exit 1
+   fi
+
+   # echo working_dir= $working_dir 
+   # curl -i -X 
+   echo curl -X PUT ${endpoint}/containers/${container}/archive?path=$working_dir -H \'Content-Type: application/x-tar\' --data-binary @$app.tar.gz > /dev/stderr
+   curl -X PUT ${endpoint}/containers/${container}/archive?path=$working_dir -H 'Content-Type: application/x-tar' --data-binary @$app.tar.gz
+   
+   if [ -f $app.tar.gz ];then
+      ## rm .tar.gz
+      echo rm $app.tar.gz > /dev/stderr
+      rm $app.tar.gz
+   fi
+
+   echo $standalone
+}
+
+
+## main
+
+matchtarget() {
+   local target=$1
+
+   local endpoint
+   local container
+   if [[ $target =~ ^/ ]];then
+      ## match /path/to
+      echo $target
+   
+   elif [[ $target =~ ^[0-9a-z\.]+$ ]];then
+      ## match host
+      echo "http://$target:2375"
+   elif [[ $target =~ ^[0-9a-z\.]+:[0-9]+$ ]];then
+      ## match host:port
+      echo "http://$target"
+   elif [[ $target =~ ^http://[0-9a-z\.]+$ ]];then
+      ## match http://host
+      echo "$target:2375"
+   elif [[ $target =~ ^http://[0-9a-z\.]+:[0-9]+$ ]];then
+      ## match http://host:port
+      echo "$target"
+
+   ##  container match   
+   elif [[ $target =~ /[a-z_-]+$ ]];then
+      ## means with container
+      container=${target##*/}
+      endpoint=${target%/*}  ## remove container
+
+      ## fix endpoint
+      if [[ ! $endpoint =~ ^http:// ]];then
+         endpoint="http://$endpoint"
+      fi
+      if [[ ! $endpoint =~ :[0-9]+$ ]];then
+         endpoint="$endpoint:2375"
+      fi
+      ## end fix
+
+      echo $endpoint $container
+   fi
+}
+
+## handle .env
+if [ ! ${TARGET} ];then
+   # from .env
+   if [ -f .env ];then source .env;fi
+else
+  ## get $TARGET here
+  if [ ! -f .env ];then 
+     echo "TARGET=${TARGET}" > .env
+  fi
+fi
+## end .env
+
+
+if [ ${TARGET} ];then
+   target_arg=${TARGET}
+   target_line=$(matchtarget $target_arg)
+   endpoint=${target_line%[[:space:]]*}  ## remove container
+   container=${target_line##*[[:space:]]}
+   if [[ $endpoint = $container ]];then
+      unset container
+   fi
+fi
+
+## opt
+if [[ $opt && ${TARGET} ]];then
+   if [ $container ];then
+      if [[ $opt = '-r' || $opt = '--restart' ]];then
+         if [ $opt_value ];then
+            container=$opt_value
+         else 
+            container=${container}_dummy
+         fi
+         echo restarging $container ...
+         restartcontainer $endpoint $container
+         # echo "usage: deployless -r <container>"
+         # listallContainers $endpoint
+         exit
+      elif [[ $opt = '-l' || $opt = '--log' ]];then
+         # echo showing logs ...
+         if [ $opt_value ];then
+            container=$opt_value
+         fi
+         echo 
+         showcontainerlogs $endpoint $container
+      fi
+   elif [[ $opt = '-t' || $opt = '--list' ]];then
+      if [[ $opt = '--list' ]];then
+         listallContainers $endpoint all
+      else
+         listallContainers $endpoint
+      fi
+   else 
+      echo no container for OPTION: $opt
+      usage
+   fi
+   exit
+fi
+
+
+## deploy-lib 
+
+putlocaljar(){
+  app=$1
+  jar=$2
+  force=$3  ## for add new jar
+
+   ## check dependency, if required new dependencies, skip
+   #      dependencies=$(checkdependency $app $jar)
+   #      if [ ${#dependencies} -gt 0 ];then
+   #          echo fail to depoy lib for dependencies: >/dev/stderr
+   #          for it in $dependencies;do
+   #            echo $'\t'$it >/dev/stderr
+   #          done
+   #          continue
+   #      fi
+   #   ## end dependency
+
+  ## start deploy jar
+
+  jarlib=$(basename $jar)
+  echo + $jarlib > /dev/stderr
+  jarok=$("$JAR_BIN" tf $app | grep $jarlib)
+    
+  if [ ! $jarok ];then
+    if [ $force ];then
+      ## means new jar
+      ## .war for WEB-INF, .jar for BOOT-INF
+      local ext=${app##*.}  ##extension of app
+      local INF
+      if [ $ext = 'war' ];then
+        INF=WEB-INF
+      else
+        INF=BOOT-INF 
+      fi
+      echo "$INF/lib/$jarlib" > /dev/stderr
+      jarok="$INF/lib/$jarlib"
+    else
+      echo "$jarlib not found in $app, use '-f' to force to add into" > /dev/stderr
+      continue
+    fi
+  fi
+
+  if [ $jarok ];then
+    ## update lib
+    jardir=$(dirname $jarok)
+    if [ ! -d $jardir ];then
+      echo mkdir -p $jardir > /dev/stderr
+      mkdir -p $jardir
+    fi
+
+    # core
+    echo mv $jar $jardir > /dev/stderr
+    mv $jar $jardir
+    echo jar 0uf $app $jarok > /dev/stderr
+    "$JAR_BIN" 0uf $app $jarok
+    echo $jarok
+
+    ## rm after jar updated
+    echo rm -f $jarok > /dev/stderr
+    rm -f $jarok
+  fi
+}
+## end deploy-lib.sh
+
+
+if [ ! $target ];then
+   target='.'
+fi
+
+## check in target dir
+# targetdir=$(basename $PWD)
+targetdir=${PWD}
+targetdir=${targetdir##*\/}
+if [[ $targetdir = 'target' ]];then
+   cd ..
+fi
+
+jarlist=()
+jars=$(ls target/*.jar *.jar 2> /dev/null)
+for j in $jars;do
+   if [[ $j = *-standalone.jar ]];then
+      continue
+   fi
+   jarlist+=($j)
+done
+
+## no jar, build
+if [ ${#jarlist[@]} -eq 0 ];then
+   if [ -f pom.xml ];then
+      echo "1> mvn -DskipTests clean -DskipStandalone=true package"
+      mvn -DskipTests clean -DskipStandalone=true package
+
+      jars=$(ls target/*.jar *.jar 2> /dev/null)
+      jarlist=()
+      for j in $jars;do
+         if [[ $j = *-standalone.jar ]];then
+            continue
+         fi
+         jarlist+=($j)
+      done
+      if [ ${#jarlist[@]} -eq 0  ];then
+         echo 'no .jar found, ignore deployless !' > /dev/stderr
+         exit
+      fi
+   else 
+      echo 'no .jar to deploy or not a maven project !' > /dev/stderr
+      exit
+   fi
+fi
+
+## check standalone 
+checkstandalone() {
+   jarlist=$1
+   for jar in $jarlist;do
+      basejar=${jar##*\/}
+      if [[ $basejar = *-standalone.jar ]];then
+          echo $jar
+          return
+      fi
+   done
+}
+standalone=$(checkstandalone $jars)
+
+if [ $standalone ];then
+   if [ $container ];then
+      ### deploy standalone into container
+      result=$(deploycontainerapp $endpoint $container $standalone)
+      if ! [[ $result = $standalone ]];then
+         echo "fail to deploy $standalone !" > /dev/stderr
+         exit 1
+      fi
+   else
+      usage  ## invalid ${TARGET}
+   fi
+else
+   ### deploy libs
+   if [ $container ];then
+      for jar in $jarlist;do
+         echo deploying $jar ...
+         deploycontainerlibs $endpoint $container $jar
+      done
+   elif [ $target ];then
+      standalone=$target
+      if [ -f $target ];then 
+         standalone=$target
+      elif [ -d $target ];then
+         standalone=$(ls $target/*.jar $target/*.war 2> /dev/null )
+      fi
+
+      ## deploy local libs
+      if [[ $standalone && -f $standalone ]];then
+         for jar in $jarlist;do
+            putlocaljar $standalone $jar $force
+         done
+      else  
+         echo no .jar, .war $standalone found within target: $target ! > /dev/stderr
+      fi
+   fi
+fi
+
+
+
+
+## final 
+if [ ! $container ];then
+   exit
+fi
+
+## restart docker container
+echo
+echo remote containers [$endpoint/containers/json] ...
+listallContainers $endpoint all | grep "$container"
+echo
+
+
+echo restart container and print logs ...
+echo "TARGET=${TARGET} deployless -r ${container}_dummy_1"
+# echo showing logs ...
+# showcontainerlogs
+echo "TARGET=${TARGET} deployless --log"

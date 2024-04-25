@@ -1,0 +1,48 @@
+{
+    "name": "dev-cli",
+    "version": "0.0.1",
+    "main": "dev-cli",
+    "repository": "dev",
+    "author": "smallsaas.cn",
+    "dependencies": {
+        "axios": "^1.6.1",
+        "commander": "^2.16.0"
+    },
+    "bin": {
+        "remote": "./remote",
+        "standalone": "./standalone",
+        "deployless": "./deployless",
+        "jq": "./bin/jq-win64.exe",
+        "tarsh": "./tar.sh",
+        "tar-snapshot": "./tar-snapshot",
+        "webjar": "./webjar",
+        "cfr": "./cfr",
+        "h2-test": "./h2-test",
+        "mysql-test": "mysql-test",
+        "dependency": "./dependency",
+        "dependency-copy": "./dependency-copy",
+        "dependency-diff": "./dependency-diff",
+        "dependency-install": "./dependency-install",
+        "dependency-pom": "./dependency-pom",
+        "cg-api-server": "./cg-api-server",
+        "cg-cli": "./cg-cli",
+        "id-worker": "./id-worker",
+        "genToken": "./genToken",
+        "pdf-page": "./pdf-page",
+        "signature": "./signature",
+        "fatjar-find": "./fatjar-find",
+        "fatjar-diff": "./fatjar-diff",
+        "fatjar-cfr": "./fatjar-cfr",
+        "fatjar-cfr-auto": "./fatjar-cfr-auto",
+        "checksum-diff": "./checksum-diff.sh",
+        "checksum": "./checksum",
+        "crc32sum": "./crc32sum",
+        "sha256sum": "./sha256sum",
+        "hosts": "./hosts",
+        "deploy-lib": "./deploy-lib.sh"
+    },
+    "devDependencies": {
+        "js-yaml": "^4.1.0",
+        "yaml": "^1.10.2"
+    }
+}

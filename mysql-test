@@ -1,0 +1,198 @@
+#!/usr/bin/env bash
+ARTIFACT='com.tools:mysql-test:1.0:jar:all'
+artifact='mysql-test-1.0-all.jar'
+artifact_ls="/var/tmp/$artifact"
+artifact_cli='mysql-test'
+
+getartifact(){
+   if [ ! -d /var/tmp ];then
+      mkdir -p /var/tmp
+   fi 
+   if [ ! -f $artifact_ls ];then
+      mvn org.apache.maven.plugins:maven-dependency-plugin:3.2.0:copy -Dartifact=$ARTIFACT -DoutputDirectory=/var/tmp
+   fi
+   if [ ! -f $artifact_ls ];then
+      local dir=$(readdir $artifact_cli)
+
+      echo fail to mvn copy $ARTIFACT > /dev/stderr
+      echo "1> cp $dir/lib/$artifact ./$artifact_ls" > /dev/stderr
+      cp $dir/lib/$artifact ./$artifact_ls
+   fi
+   if [ ! -f $artifact_ls ];then
+      echo fail to get $artifact > /dev/stderr
+      exit
+   fi
+}
+getartifact
+
+
+readdir(){
+  bin=$1
+  local dir=$(which $1)
+        dir=${dir%/*}
+  if [ -d $dir/node_modules/dev-cli ];then
+     dir=$dir/node_modules/dev-cli
+  fi
+  if [[ $(uname -s) = Darwin ]];then
+     dir=${dir%/*}/lib/node_modules/dev-cli
+  fi
+  echo $dir
+}
+# ls $(readdir cg-cli)/cg-cli.js
+
+usage(){
+   cat <<- EOF
+	EOF
+ 	cat <<- EOF
+    usage: mysql-test [OPTIONS]
+           mysql-test [OPTIONS] show alias
+           mysql-test set current <database>
+           mysql-test show databases
+           mysql-test show tables
+           mysql-test run <sql>
+
+    OPTIONS:
+      -h --help               --print usage
+      -j --json               --print as json format
+      -f --force              --force override alias
+	EOF
+	exit
+}
+if [ ${#@} = 0 ];then 
+  usage
+fi
+
+
+## check options
+run_cmd=$9
+run_sql=$9
+show_cmd=$9
+set_cmd=$9
+setcurrent_cmd=$9
+showtables_cmd=$9
+showtables_db=$9
+showtdb_cmd=$9
+showalias_cmd=$9
+db_opt=$9
+force_opt=$9
+json_opt=$9
+for opt in $@;do
+   if [[ $opt = '-h' || $opt = '--help' ]];then
+      usage
+   elif [[ $opt = '-j' || $opt = '--json' ]];then
+      json_opt=$opt
+   elif [[ $opt = '-f' || $opt = '--force' ]];then
+      force_opt=$9
+   elif [[ $opt = 'run' ]];then
+      run_cmd=$opt
+   elif [ $run_cmd ];then
+      ## all its args
+      run_sql+=($opt)
+      # echo ${run_sql[@]}
+   elif [[ $opt = 'show' ]];then
+      show_cmd=$opt
+   elif [[ $opt = 'set' ]];then
+      set_cmd=$opt
+   elif [ $set_cmd ];then
+      setcurrent_cmd=$opt
+      unset set_cmd
+   elif [ $setcurrent_cmd ];then
+      db_opt=$opt
+   elif [[ $show_cmd && $opt = 'alias' ]];then
+      showalias_cmd=$opt
+   elif [[ $show_cmd && $opt = 'tables' ]];then
+      showtables_cmd=$opt
+   elif [[ $showtables_cmd ]];then
+      showtables_db=$opt
+   elif [[ $show_cmd && $opt = 'databases' ]];then
+      showtdb_cmd=$opt
+   fi
+done
+# if [[ $run_cmd && ! $run_sql ]];then
+#    usage
+# fi
+if [[ $setcurrent_cmd && ! $db_opt ]];then
+   usage
+fi
+
+
+JAVA_BIN=$(which java)
+# JAVA_BIN='/c/Program\ Files/Microsoft/jdk-11.0.12.7-hotspot/bin/java'
+mysqlalias(){
+   local connection_string=$(node $(readdir mysql-test)/mysql-test.js get-connection-string)
+   # echo $connection_string
+   
+   # mysqlaliascmd="'$JAVA_BIN' -jar $artifact_ls '$connection_string'"
+   # $("$mysqlaliascmd")
+
+   ## alias   
+   # echo "alias mysqlcmd=\"java -jar $artifact_ls '$connection_string'\"" > /var/tmp/mysql-test.alias 
+   # echo source /var/tmp/mysql-test.alias
+   ## end alias
+   if [ $force_opt ];then
+      echo "$connection_string" > /var/tmp/.mysql-test
+   fi
+   cat /var/tmp/.mysql-test
+}
+
+setcurrentdatabase(){
+   database=$1
+   op='-i'
+   sed $op "s/\/[a-z\_]*?/\/$database?/" /var/tmp/.mysql-test
+   # sed "s/jdbc:mysql:\/\/[0-9\.a-z:]*\/[a-z\_]*/jdbc:mysql:\/\/$mysqlurl/" /var/tmp/.mysql-test
+   cat /var/tmp/.mysql-test
+}
+
+querysql(){
+   local sql=$1
+   # echo java -jar $artifact_ls "\"$sql\""
+   java -jar $artifact_ls "\"$sql\""
+}
+
+showtables(){
+   database=$1
+   if [ ! $database ];then
+      database=$(java -jar $artifact_ls "select database()")
+   fi
+   sql="select TABLE_NAME from INFORMATION_SCHEMA.TABLES where TABLE_SCHEMA='$database' and TABLE_NAME <> 'schema_version'"
+
+   querysql "$sql"
+   # echo java -jar $artifact_ls "\"$sql\""
+   # java -jar $artifact_ls "\"$sql\""
+}
+
+showdatabases(){
+   querysql "show databases;"
+}
+
+
+## handle cg-cli local update 
+if [ $showalias_cmd ];then 
+   mysqlalias
+elif [ $run_cmd ];then   
+   SQL="${run_sql[@]}" 
+   # java -jar $artifact_ls "\"${run_sql[@]}\"" 
+   querysql "$SQL"
+   # querysql "select * from nft_player"
+elif [ $showtdb_cmd ];then
+   showdatabases 
+elif [ $showtables_cmd ];then
+   # mysqlaliasok=$(alias mysqlcmd 2> /dev/null)
+   # if [ -z "$mysqlaliasok" ];then
+   #    mysqlalias
+   #    exit
+   # fi
+   if [ $json_opt ];then
+      json_opt='json'
+      node $(readdir mysql-test)/mysql-test.js get-connection-string $json_opt
+   else
+      showtables $showtables_db
+   fi
+   exit 0
+elif [ $setcurrent_cmd ];then 
+   setcurrentdatabase $db_opt
+fi
+
+
+## ...
+# node $(readdir)/mysql-test.js $@

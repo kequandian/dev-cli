@@ -1,0 +1,403 @@
+#!/usr/bin/perl -w
+
+my $cmd = shift @ARGV;
+my $dir = shift @ARGV;
+my $param = shift @ARGV;
+
+if(!$dir || !$cmd){
+    my $bin = $0;
+    $bin =~ /\/(\w+)$/;
+    $bin = $1;
+    print "Usage: \n";
+    print "   $bin <CMD> <dir> [target]\n";
+    print " CMD: <get|xfr|mv|fix|clone|init|push|pull|test|mirror>\n";
+    print "   xfr <target>    -- transfer one repo to another\n";
+    print "   mv              -- mv one repo name to new name\n";
+    print "   fix <target>    -- fix one repo base on the dir name\n";
+    print "   clone <target>  -- clone a repo base on the dir repo \n";
+    print "   pull .          -- pull all the repo in current dir\n";
+    print "   clean .         -- clean current dir base on pom.xml\n";
+    print "   cleangit .      -- clean all the .git dir in current dir\n";
+    print "   mirror <target> [mirror] -- mirror current repo into a mirror repo\n";
+    print "   mirrorback <target> [imrror] -- mirror repo into current target\n";
+    print "   mirrorinit <target> [imrror] -- init mirror repo within devops\@git.smallsaas.cn\n";
+    exit(0);
+}
+
+$dir =~ s/\/$//;
+$dir =~ s/\.git$//;
+if( ! -d $dir ){
+   print "$dir not exists\n";
+   exit(0);
+}
+
+if($cmd eq "xfr"){
+   chdir $dir;
+   if( ! -d '.git'){
+      exit(0);
+   }
+   my $target = $param;
+   $target =~ s/\/$//;
+
+   my $content = `git remote -v`;
+   my $rp = filter_repo($content);
+   $rp =~ s/\/[\w\-]+\.git$//;
+   $rp = "$rp/$target.git";
+
+   ## set target
+   chdir "../$target";
+   if( ! -d '.git'){
+      print `git init`;
+   }
+   
+   $content = `git remote -v`;
+   if($content =~ /\n/){
+       ## set-url origin
+       print `git remote set-url origin $rp`;
+    }else{
+       ## add origin
+       print `git remote add origin $rp`;
+    }
+    
+    print `git remote -v`;
+
+}elsif($cmd eq 'get'){
+   chdir $dir;
+
+   if(-d '.git'){
+      print get_local_repo()."\n";
+   }else{
+      ## get all within dir
+      my @list;
+      opendir(DIR, $dir);
+      @list = readdir(DIR);
+      closedir(DIR);
+      shift @list;
+      shift @list;
+
+      foreach my $d (@list){
+         if(-d $d){ 
+            chdir $d;
+            if(-d ".git"){
+                 print get_local_repo()."\n";
+             }
+             chdir "..";
+          }
+      }## foreach
+   }
+
+}elsif($cmd eq 'mirror' || $cmd eq 'mirrorback' || $cmd eq 'mirrorinit'){
+   chdir $dir;  ## <target>
+   my $target=$dir;
+   my $mirror_repo = $param;
+
+   ## if define .mirror config
+   if(!($mirror_repo)){
+      if(-f ".mirror"){
+         $mirror_repo= `cat .mirror`;
+         $mirror_repo=~s/[\r\n\t\s]+$//; 
+      }else{
+         ## no mirror param and no .mirror file, 
+         ## pleas provide mirror repo
+   
+         ## no mirror repo provided, use default mirror repo by target dir
+         my $local_repo = get_local_repo();
+         $local_repo =~ /\/([\w\.\-_]+)$/;
+
+         $mirror_repo="devops\@git.smallsaas.cn:/home/devops/mirror/$1";
+         #print "mirror: $mirror_repo\n";
+
+         print "Usage: remote mirror $target $mirror_repo\n";
+      }
+   }elsif(!(-f '.mirror')){
+      ## if mirror_repo and no .mirror save it
+      open my $fh, ">", ".mirror";
+        print $fh $mirror_repo;
+      close $fh;
+   }
+
+
+   if(!($mirror_repo)){
+      print "Usage: remote mirror <target> <mirror-repo>\n";
+      exit(0);
+   }
+
+   my $local_repo = get_local_repo();
+   print "## #################\n";
+   print '## '.$local_repo." ##\n";
+   print '## + '.$mirror_repo." ##\n";
+   print "## #################\n\n";
+
+   ## mirror
+   if($cmd eq 'mirror'){
+      print "git remote set-url origin $mirror_repo\n";
+      print `git remote set-url origin $mirror_repo`;
+      print "git push origin master\n";
+      print `git push origin master`;
+      print "git remote set-url origin $local_repo\n";
+      print `git remote set-url origin $local_repo`;
+
+   }elsif($cmd eq 'mirrorback'){
+      print "git remote set-url origin $mirror_repo\n";
+      print `git remote set-url origin $mirror_repo`;
+      print "git pull origin master\n";
+      print `git pull origin master`;
+      print "git remote set-url origin $local_repo\n";
+      print `git remote set-url origin $local_repo`;
+
+   }elsif($cmd eq 'mirrorinit'){
+      my $repo_name = get_local_repo_name();
+      print "ssh devops\@git.smallsaas.cn \"cd mirror && git init --bare $repo_name\"\n";
+      print `ssh devops\@git.smallsaas.cn "cd mirror && git init --bare $repo_name"`;
+   }
+
+   print "\n";
+   print "## ############### ##\n";
+   print '## '.get_local_repo()." ##\n";
+   print "## ############### ##\n";
+
+}elsif($cmd eq 'mv'){
+   chdir $dir;
+   my $nrepo_name=$param;
+   if( ! $nrepo_name ){
+      print "Usage: remote mv <repo> <new-repo>\n";
+      exit(0);
+   }
+   $nrepo_name = check_repo($nrepo_name);
+   my $repo_root = get_local_repo_root();
+   my $nrepo = "$repo_root/$nrepo_name";
+   
+   print `git remote set-url origin $nrepo`;
+   print get_local_repo();
+
+
+}elsif($cmd eq 'fix'){
+    chdir $dir;
+    my $fix_name = $dir;
+    $fix_name =~ s/\/$//;
+    $fix_name = "$fix_name.git";
+    my $repo_name = get_local_repo_name();
+    if( $fix_name eq $repo_name ){
+    }else{
+        my $repo_root = get_local_repo_root();
+        print `git remote set-url origin $repo_root/$fix_name`;
+    }
+    print get_local_repo();
+    
+}elsif($cmd eq 'clone'){
+   chdir $dir;
+   my $repo_root = get_local_repo_root();
+   chdir "..";
+
+   my $new_repo = shift @ARGV;
+   
+   my $repo = $param;
+   $repo =~ s/\///;
+   $repo =~ s/\.git$//;
+    
+   if ($new_repo){
+      print `git clone $repo_root/$repo.git $new_repo`;
+   }else{
+      print `git clone $repo_root/$repo.git`;
+   }
+
+}elsif($cmd eq 'init'){
+   chdir $dir;
+   if( ! -d '.git'){
+      print `git init`;
+   }
+   my $comment = $param;
+   if(! $comment){
+       $comment = 'init';
+   }
+
+   print `git add --all`;
+   print `git commit -m \"$comment\"`;
+
+}elsif($cmd eq 'push'){
+   chdir $dir;
+   if( -d '.git'){
+      my $content = `git remote -v`;
+      if($content =~ /\n/){
+          print `git push origin master`;
+      }
+   }
+
+}elsif($cmd eq 'pull'){
+
+   if( -d '.git'){
+     my $curr_root = &get_local_repo_root();
+     $curr_root =~ s/[\r\n\s\t]+$//;
+     my $ll = "$curr_root/$dir";
+     if(-d $dir){
+        chdir $dir;
+        if(-d '.git'){
+           print `git pull origin master`;
+        }else{
+           print "$ll\n";
+	   print 
+           print `git init`;
+	   print `git remote add origin $ll`;
+	   print `git pull origin master`; 
+        }
+     }else{
+        print `git clone $ll`;
+     }
+
+   }else{
+      chdir $dir;
+      if( -d '.git'){
+          my $content = `git remote -v`;
+          if($content =~ /\n/){
+             print `git pull origin master`;
+          }
+      }
+   
+      else{
+         ## pull all within dir
+         my @list;
+         opendir(DIR, $dir);
+         @list = readdir(DIR);
+         closedir(DIR);
+         shift @list;
+         shift @list;
+
+         foreach my $d (@list){
+            if(-d $d){ 
+	          chdir $d;
+	          if(-d ".git"){
+                 print $d."\n";
+	             my $line= `git pull origin master`;
+	             print $line;
+	          }
+	         chdir "..";
+	       }
+         }## foreach
+		 
+      }##end pull from dir
+
+   }## end within git repo
+
+}elsif($cmd eq 'clean'){
+   chdir $dir;
+   
+   if ( -f 'pom.xml' ){
+      `mvn clean`
+   }else{
+
+      my @dirs = ();
+      opendir(DIR, $dir);
+         @dirs = readdir(DIR);
+      closedir(DIR);
+
+      foreach my $target (@dirs){
+         if(-d $target){
+            if( $target =~ /^\./){
+               next;
+            }
+
+            chdir $target;
+            if(-f 'pom.xml'){
+               print `pwd`;
+               print `mvn clean`;
+            }
+            chdir '..';
+         }
+      }
+
+      #my $pom = $0;
+      #$pom =~ tr/\\/\//;
+      #$pom =~ s/^c:\//\/c\//i;
+      #$pom =~ s/\/\w+$//;
+      #$pom = "$pom".'/pom.xm_';
+      #if(-f $pom){
+      #   print `cp $pom . && mv pom.xm_ pom.xml && ls pom.xml`;
+      #}
+
+
+   }
+
+}elsif($cmd eq 'cleangit'){
+   chdir $dir;
+
+   my @dirs = ();
+   opendir(DIR, $dir);
+      @dirs = readdir(DIR);
+   closedir(DIR);
+
+   foreach my $target (@dirs){
+      if(-d $target){
+         if( $target =~ /^\./){
+            next;
+         }
+
+         chdir $target;
+         my $ok;
+         if(-d '.git'){
+            $ok=1;
+            print `rm -rf .git`;
+         }
+         if(-d '.idea'){
+            $ok=1;
+            print `rm -rf .idea`;
+         }
+         if(-f '.gitignore'){
+            $ok=1;
+            print `rm -f .gitignore`;
+         }
+         if(-f '.iml'){
+            $ok=1;
+            print `rm -f .iml`;
+         }
+         if($ok){
+             print `pwd`;
+         }
+         chdir '..';
+      }
+   }
+
+}else{
+   print "unknown command $cmd\n";
+}
+
+sub get_local_repo_name {
+   my $repo = get_local_repo();
+   $repo =~ /\/([\w\-]+\.git)$/;
+   my $repo_name = $1;
+   return $repo_name;
+}
+
+
+sub get_local_repo_root {
+   my $repo = get_local_repo();
+   $repo =~ s/\/[\w\-]+\.git$//;
+   return $repo;
+}
+
+sub get_local_repo {
+    if( -d '.git'){
+       my $content = `git remote -v`;
+       if($content){
+          $content = filter_repo($content);
+       }
+       return $content;
+    }
+}
+
+sub check_repo{
+   my $lrepo = shift;
+   $lrepo =~ s/\.git$//;
+   $lrepo = "$lrepo.git";
+   return $lrepo;
+}
+
+sub filter_repo{
+    my $content = shift;
+
+    my @ss = split(/\n/, $content);
+    $content = $ss[0];
+    $content =~ s/^\w+//;
+    $content =~ s/\(fetch\)//;
+    $content =~ s/\s//g;
+    return $content;
+}

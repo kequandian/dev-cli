@@ -1,0 +1,250 @@
+#!/bin/bash
+# standalone --h2           -- add h2-1.4.194.jar driver for test
+# check h2-1.4.194.jar automatically
+# remote debug: JAVA_OPTS='-Xdebug -Xrunjdwp:transport=dt_socket,server=y,address=*:5005,suspend=n'
+
+usage() {
+	cat <<- EOF
+	
+Usage: standalone [OPTIONS] [TARGET]
+   TARGET :      -- means classifier for: --spring.profiles.active=?
+
+   OPTIONS:
+      standalone -h --help      -- print usage
+      standalone -c --config    -- config only, <TARGET> required
+      standalone -              -- force rebuild: mvn clean
+      standalone [TARGET]       -- classifier target
+      standalone .              -- means default target: 'standalone'
+      standalone -p <port>      -- server port: --server-port=?
+      standalone -X [port]      -- remote debug, default port: 5005
+	EOF
+	exit
+}
+
+opt=$1
+target=
+port_opt=
+port=
+server_port='--server.port=8080'
+debug_x=
+debug_port='5005'
+h2_opt=
+H2_VER_JAR='h2-1.4.200.jar'
+target_yml=  ## target for application.yml
+config_only_opt=
+
+for opt in $@;do
+   if [[ $opt = '-h' || $opt = '--help' ]];then 
+      usage
+   elif [[ $opt = '-c' || $opt = '--config' ]];then 
+      config_only_opt=$opt
+   elif [[ $opt = '.' ]];then 
+      target='standalone'
+   elif [[ $opt = '-' ]];then
+      mvn clean
+   # elif [[ $opt = '--h2' ]];then
+   #    h2_opt=$opt
+   #    unset target
+   elif [[ $opt = '-X' ]];then
+      debug_x='remote'
+   elif [[ $opt = '--port' || $opt = '-p' ]];then
+      port_opt=$opt
+   elif [ $port_opt ];then
+      port=$opt
+      server_port="--server.port=$port"
+      unset port_opt
+   elif [[ $debug_x && ! $opt = '-*' && $opt = [0-9]* ]];then
+      debug_port=$opt
+   else
+      target=$opt
+   fi
+done
+
+if [[ $config_only_opt && ! $target ]];then
+   echo $config_only_opt required TARGET arg ! > /dev/stderr
+   exit
+fi
+
+## ensure application.yml config
+ensureConfig(){
+   app_dir=$1
+   yml_dir=$2  ## where origin applicatin-$target.yaml locate
+
+   if [ $target ];then
+      if [ ! -e config ];then
+         mkdir config
+      fi
+
+      # specific target applicatin.yml first 
+      if [ -f $yml_dir/standalone-$target.yml ];then
+         if [ ! -f ./config/application-$target.yml ]; then
+            echo cp $yml_dir/standalone-$target.yml ./config/application-$target.yml
+            cp $yml_dir/standalone-$target.yml ./config/application-$target.yml
+         fi
+      else
+         if [ ! -f ./config/application.yml ]; then
+            echo cp $yml_dir/standalone.yml ./config/application.yml
+            cp $yml_dir/standalone.yml ./config/application.yml
+         fi
+      fi
+
+
+      ## config the same with standalone
+
+      ## mkdir config outside target
+      if [ -d target/config ];then
+         rm -rf target/config
+      fi
+
+      ## just when no standalone...
+      if [[ $app_dir = target ]];then
+         if [ ! -d target/config ]; then
+            mkdir target/config
+         fi
+      fi
+
+      ## alway override application.yml
+      if [[ ! $app_dir = '.' ]];then
+         if [ -d $app_dir/config ];then
+            if [ -f ./config/application-$target.yml ];then
+               echo "cp config/application.yml $app_dir/config/application-$target.yml"
+               cp ./config/application-$target.yml $app_dir/config/application-$target.yml
+            else
+               echo "cp config/application.yml $app_dir/config/application-$target.yml"
+               cp ./config/application.yml $app_dir/config/application-$target.yml
+            fi
+         fi
+      fi
+   fi
+}
+
+runStandalone(){
+   app=$1
+
+   if [ $debug_x ];then
+      JAVA_OPTS="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,address=*:$debug_port,suspend=n" 
+   fi
+   
+   local CLASSIFIER_OPT=""
+   if [ $target ];then
+      CLASSIFIER_OPT="--spring.profiles.active=$target"
+   fi
+
+   echo "java $JAVA_OPTS -jar $app "$CLASSIFIER_OPT" $server_port"
+   java $JAVA_OPTS -jar $app "$CLASSIFIER_OPT" $server_port
+}
+
+appendH2Driver(){
+   app=$1
+   # check if standalone has h2-*.jar
+   h2=$(jar tf $app 'BOOT-INF/lib/h2-1.')
+   if [ $h2 ];then
+      echo $2
+   else
+      if [ ! -f BOOT-INF/lib/$H2_VER_JAR ];then
+         if [ ! -d BOOT-INF/lib ];then 
+            mkdir -p BOOT-INF/lib
+         fi
+         cp $dir/lib/$H2_VER_JAR BOOT-INF/lib/$H2_VER_JAR
+      fi
+      echo jar 0uf $app BOOT-INF/lib/$H2_VER_JAR
+      jar 0uf $app BOOT-INF/lib/$H2_VER_JAR
+      # echo "jar tf $standalone | grep $H2_VER_JAR"
+      jar tf $app | grep $H2_VER_JAR
+
+      # clean up 
+      rm -rf BOOT-INF/lib/$H2_VER_JAR
+      rmdir BOOT-INF/lib 2> /dev/null
+      rmdir BOOT-INF 2> /dev/null 
+   fi
+}
+
+readdir(){
+  bin=$1
+  local dir=$(which $1)
+        dir=${dir%/*}
+
+  ## fix softlink
+  if [ -d $dir/node_modules/dev-cli ];then
+     dir=$dir/node_modules/dev-cli
+  fi
+  #once again
+  if [ -d $(dirname $dir)/lib/node_modules/dev-cli ];then
+     dir=$(dirname $dir)/lib/node_modules/dev-cli
+  fi
+  ## end fix softlink
+
+  # fix Darwin
+  if [ ! -d $dir ];then
+    if [[ $(uname -s) = Darwin ]];then
+       dir=${dir%/*}/lib/node_modules/dev-cli
+    fi
+  fi
+  ## end fix Darwin
+
+  echo $dir
+}
+
+### start ###
+dir=$(readdir standalone)
+
+## get config only 
+if [ $config_only_opt ];then 
+   ensureConfig "." $dir
+   exit
+fi
+
+## check in target dir
+# targetdir=$(basename $PWD)
+targetdir=$PWD
+targetdir=${targetdir##*\/}
+if [ $targetdir = 'target' ];then
+   cd ..
+fi
+
+standalone=$(ls *.jar 2> /dev/null)
+if [ -z "$standalone" ];then
+   ## find standalone from target
+   standalone=$(ls target/*-standalone.jar target/*-all.jar target/*-RELEASE.jar target/app.jar 2> /dev/null)
+   if [ ! $standalone ];then
+      ## no standalone, build
+      if [[ ! -d target || -z "$(ls target/*-standalone.jar target/*-all.jar target/*-RELEASE.jar target/app.jar 2> /dev/null)" ]];then
+         if [ ! -f ./pom.xml ];then
+            cp -r $dir/pom_template.xml ./pom.xml
+         fi
+         echo "1> mvn -DskipTests clean -DskipStandalone=false package"
+         mvn -DskipTests clean -DskipStandalone=false package
+
+         ## final check
+         standalone=$(ls target/*-standalone.jar target/*-all.jar target/*-RELEASE.jar target/app.jar 2> /dev/null)
+         if [ ! $standalone ];then
+            echo 'fail to build -standalone.jar => mvn clean package'
+            exit
+         fi
+      fi
+   fi
+elif [ -f "$standalone" ];then 
+   ## do nothing
+   standalone=$standalone
+else
+   ## means mulit jars
+   echo "fatal: multi target [$standalone] found !"
+   exit
+fi
+
+
+## standlaone 
+if [[ $target = test ]];then 
+   appendH2Driver $standalone
+fi
+
+if [ $target ];then
+   app_dir=${standalone%/*}
+   if [[ $app_dir = $standalone ]];then
+      app_dir='.'
+   fi
+#   echo ensureConfig $app_dir $dir
+  ensureConfig $app_dir $dir
+fi
+
+runStandalone $standalone

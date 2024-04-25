@@ -1,0 +1,90 @@
+#!/usr/bin/env bash
+
+readdir(){
+  bin=$1
+  local dir=$(which $1)
+        dir=${dir%/*}
+  if [ -d $dir/node_modules/dev-cli ];then
+     dir=$dir/node_modules/dev-cli
+  fi
+  if [[ $(uname -s) = Darwin ]];then
+     dir=${dir%/*}/lib/node_modules/dev-cli
+  fi
+  echo $dir
+}
+# ls $(readdir cg-cli)/cg-cli.js
+
+usage(){
+   cat <<- EOF
+	EOF
+ 	cat <<- EOF
+    usage: cg-cli [OPTIONS] [args..]
+           cg-cli local update [table-name]
+
+
+    OPTIONS:
+      -h --help                  --print usage
+         --show-endpoint         --show current endpoint
+         --show-default <field>  --show default fields
+
+	EOF
+	exit
+}
+if [ ${#@} = 0 ];then 
+  usage
+fi
+
+
+## main 
+cli=$(readdir cg-cli)
+
+## check options
+local_cmd=$9
+update_cmd=$9
+table_name_opt=$9
+show_ep_opt=
+show_default_opt=
+show_default_field_opt=
+for opt in $@;do
+   if [[ $opt = '-h' ]];then 
+      usage
+   elif [[ $opt = '--help' ]];then 
+      ## do nothing, show java usage
+      opt=$opt
+   elif [[ $opt = 'local' ]];then
+      local_cmd=$opt
+   elif [[ $opt = 'update' ]];then
+      update_cmd=$opt
+   elif [[ $local_cmd && $update_cmd ]];then
+      table_name_opt=$opt
+## show endpoint
+   elif [[ $opt = --show-endpoint ]];then 
+      show_ep_opt=$opt
+## show default
+   elif [[ $opt = --show-default ]];then 
+      show_default_opt=$opt
+   elif [ $show_default_opt ];then
+      show_default_field_opt=$opt
+      unset show_default_opt
+   fi
+done
+
+
+if [ $show_ep_opt ];then 
+  node $cli/cg-cli.js show-endpoint
+elif [ $show_default_opt ];then 
+  node $cli/cg-cli.js show-default
+elif [ $show_default_field_opt ];then 
+  node $cli/cg-cli.js show-default-field $show_default_field_opt
+
+elif [ $update_cmd ];then 
+   if [ $table_name_opt ];then
+      node $cli/cg-cli.js update-table-entity $table_name_opt
+   else
+      node $cli/cg-cli.js update-table-entity
+   fi
+
+else
+   ## directly show nodejs commands
+   node $(readdir)/cg-cli.js $@
+fi
