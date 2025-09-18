@@ -17,6 +17,7 @@ Usage: standalone [OPTIONS] [TARGET]
       standalone .              -- means default target: 'standalone'
       standalone -p <port>      -- server port: --server-port=?
       standalone -X [port]      -- remote debug, default port: 5005
+      standalone --init         -- used to init the database
 	EOF
 	exit
 }
@@ -32,6 +33,7 @@ h2_opt=
 H2_VER_JAR='h2-1.4.200.jar'
 target_yml=  ## target for application.yml
 config_only_opt=
+init_opt=  ## for database initialization
 
 for opt in $@;do
    if [[ $opt = '-h' || $opt = '--help' ]];then 
@@ -55,6 +57,8 @@ for opt in $@;do
       unset port_opt
    elif [[ $debug_x && ! $opt = '-*' && $opt = [0-9]* ]];then
       debug_port=$opt
+   elif [[ $opt = '--init' ]];then
+      init_opt='true'
    else
       target=$opt
    fi
@@ -76,12 +80,17 @@ ensureConfig(){
       fi
 
       # specific target applicatin.yml first 
+      echo "ensure config for target [$target] in $app_dir"
       if [ -f $yml_dir/standalone-$target.yml ];then
+         echo "found $yml_dir/standalone-$target.yml"
          if [ ! -f ./config/application-$target.yml ]; then
             echo cp $yml_dir/standalone-$target.yml ./config/application-$target.yml
             cp $yml_dir/standalone-$target.yml ./config/application-$target.yml
+         else
+            echo "found ./config/application-$target.yml, skip copy !!!"
          fi
       else
+         echo "not found $yml_dir/standalone-$target.yml, use standalone.yml instead"
          if [ ! -f ./config/application.yml ]; then
             echo cp $yml_dir/standalone.yml ./config/application.yml
             cp $yml_dir/standalone.yml ./config/application.yml
@@ -107,9 +116,9 @@ ensureConfig(){
       if [[ ! $app_dir = '.' ]];then
          if [ -d $app_dir/config ];then
             if [ -f ./config/application-$target.yml ];then
-               echo "cp config/application.yml $app_dir/config/application-$target.yml"
+               echo "cp config/application-$target.yml $app_dir/config/application-$target.yml"
                cp ./config/application-$target.yml $app_dir/config/application-$target.yml
-            else
+            elif [ -f ./config/application.yml ];then 
                echo "cp config/application.yml $app_dir/config/application-$target.yml"
                cp ./config/application.yml $app_dir/config/application-$target.yml
             fi
@@ -130,8 +139,13 @@ runStandalone(){
       CLASSIFIER_OPT="--spring.profiles.active=$target"
    fi
 
-   echo "java $JAVA_OPTS -jar $app "$CLASSIFIER_OPT" $server_port"
-   java $JAVA_OPTS -jar $app "$CLASSIFIER_OPT" $server_port
+   local INIT_OPT=""
+   if [ $init_opt ];then
+      INIT_OPT="--spring.datasource.initialize=true"
+   fi
+
+   echo "java $JAVA_OPTS -jar $app "$CLASSIFIER_OPT" $INIT_OPT $server_port"
+   java $JAVA_OPTS -jar $app "$CLASSIFIER_OPT" $INIT_OPT $server_port
 }
 
 appendH2Driver(){
